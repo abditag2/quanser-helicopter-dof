@@ -1,0 +1,16 @@
+make -C /lib/modules/2.6.18/build M=/usr/src/Q8Package modules
+make[1]: Entering directory `/usr/src/linux-2.6.18'
+  CC [M]  /usr/src/Q8Package/q8Driv.o
+/usr/src/Q8Package/q8Driv.c:8: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘q8_interrupt’
+/usr/src/Q8Package/q8Driv.c: In function ‘Q8_Probe’:
+/usr/src/Q8Package/q8Driv.c:59: warning: implicit declaration of function ‘request_irq’
+/usr/src/Q8Package/q8Driv.c:59: error: ‘q8_interrupt’ undeclared (first use in this function)
+/usr/src/Q8Package/q8Driv.c:59: error: (Each undeclared identifier is reported only once
+/usr/src/Q8Package/q8Driv.c:59: error: for each function it appears in.)
+/usr/src/Q8Package/q8Driv.c:59: error: ‘SA_SHIRQ’ undeclared (first use in this function)
+/usr/src/Q8Package/q8Driv.c: In function ‘Q8_Remove’:
+/usr/src/Q8Package/q8Driv.c:84: warning: implicit declaration of function ‘free_irq’
+make[2]: *** [/usr/src/Q8Package/q8Driv.o] Error 1
+make[1]: *** [_module_/usr/src/Q8Package] Error 2
+make[1]: Leaving directory `/usr/src/linux-2.6.18'
+make: *** [modules] Error 2

@@ -1,0 +1,16 @@
+
+
+In order to run this: 
+make modules
+sudo insmod q8Driv.ko
+dmesg
+find the “Major Number” from the dmesg log (probably it is 248)
+sudo mknod /dev/q8 c 248 0 (248 should be replaced with the major number from previous step)
+
+Once the module is inserted into the kernel we can run the following to control the values.
+
+gcc Q8user-test.c -o Q8user-test
+sudo ./Quser-test
+
+
+
