@@ -23,11 +23,83 @@ struct state {
 	double d_travel;
 } state;  
 
+struct command{
+	double u1;
+	double u2;
+} command;
+
 double SIM_STEP = 0.01;
 
-struct state simulate(struct state init_state, double u1, double u2, double time){
+struct state eval_state(struct state state_x, u1, u2){
 
 	struct state d_state;
+
+	d_state.elevation = state_x.d_elevation;
+	d_state.pitch = state_x.d_pitch;
+	d_state.travel = state_x.d_travel;
+	d_state.d_elevation = P[1]*cos(state_x.elevation)+ P[2]*sin(state_x.elevation) 			+ P[8]*cos(state_x.pitch)*(u1+u2) ; 
+	d_state.d_pitch = P[5]*sin(state_x.pitch) + P[4]*cos(state_x.pitch)+ P[6]*state_x.d_pitch	+ P[9]*(u1-u2);
+	d_state.d_travel = P[7]*state_x.d_travel							+ P[10]*sin(state_x.pitch)*(u1+u2);
+
+	state_x.elevation += SIM_STEP*d_state.elevation;
+	state_x.pitch += SIM_STEP*d_state.pitch;
+	state_x.travel += SIM_STEP*d_state.travel;
+	state_x.d_elevation += SIM_STEP*d_state.d_elevation;
+	state_x.d_pitch += SIM_STEP*d_state.d_pitch;
+	state_x.d_travel += SIM_STEP*d_state.d_travel;
+
+	return state_x;
+
+}
+
+double elevation1 = 0;
+double elevation2 = 0;
+
+double pitch1 = 0;
+double pitch2 = 0;
+
+double travel1 = 0;
+double travel2 = 0;
+
+double int_elevation = 0;
+double int_pitch = 0;
+double int_travel = 0;	
+
+
+
+
+struct command controller(double elevation_conv, double pitch_conv, double travel_conv){
+
+	struct command U;
+
+	//printf("\n:info int_elevation: %lf elevation_conv: %lf int_pitch:%lf, pitch_conv:%lf\n", int_elevation, elevation_conv, int_pitch, pitch_conv);
+
+	int_travel +=  travel_conv;
+	int_pitch +=  pitch_conv;
+	int_elevation +=  elevation_conv;
+
+	d_travel =  (travel_conv - travel1);
+	d_pitch  = (pitch_conv - pitch1);
+	d_elevation = (elevation_conv - elevation1);			
+
+	U.u1 = -4.5 * elevation_conv  - .701 * pitch_conv  -25.7161 * d_elevation -3.051 * d_pitch -0.0333*int_elevation -0.001*int_pitch;
+	U.u2  = -4.5 * elevation_conv  + .5701 * pitch_conv -25.7529 * d_elevation +5.970 * d_pitch -0.03*int_elevation +0.001*int_pitch;
+
+	elevation2 = elevation1;
+	elevation1 = elevation_conv;
+
+	pitch2 = pitch1;
+	pitch1 = pitch_conv;
+
+	travel2 = travel1;
+	travel1 = travel_conv;	
+
+	return U;
+}
+
+
+struct state simulate_fixed_control(struct state init_state, double u1, double u2, double time){
+
 	struct state state_x;
 
 	state_x = init_state;
@@ -35,25 +107,38 @@ struct state simulate(struct state init_state, double u1, double u2, double time
 	int steps = time/SIM_STEP;
 	int k = 0;
 	for (k = 0; k <steps; k++){
-
-		d_state.elevation = state_x.d_elevation;
-		d_state.pitch = state_x.d_pitch;
-		d_state.travel = state_x.d_travel;
-		d_state.d_elevation = P[1]*cos(state_x.elevation)+ P[2]*sin(state_x.elevation) 			+ P[8]*cos(state_x.pitch)*(u1+u2) ; 
-		d_state.d_pitch = P[5]*sin(state_x.pitch) + P[4]*cos(state_x.pitch)+ P[6]*state_x.d_pitch	+ P[9]*(u1-u2);
-		d_state.d_travel = P[7]*state_x.d_travel							+ P[10]*sin(state_x.pitch)*(u1+u2);
-
-		state_x.elevation += SIM_STEP*d_state.elevation;
-		state_x.pitch += SIM_STEP*d_state.pitch;
-		state_x.travel += SIM_STEP*d_state.travel;
-		state_x.d_elevation += SIM_STEP*d_state.d_elevation;
-		state_x.d_pitch += SIM_STEP*d_state.d_pitch;
-		state_x.d_travel += SIM_STEP*d_state.d_travel;
-
+		state_x = eval_state(state_x, u1, u2);
 	}
 
 	return state_x;
 }
+
+struct state simulate_with_control(struct state init_state, double time){
+
+	struct state state_x;
+
+	state_x = init_state;
+
+	int steps = time/SIM_STEP;
+	int k = 0;
+	for (k = 0; k <steps; k++){
+		struct command U = controller(double elevation, double pitch, double travel);
+		state_x = eval_state(state_x, U.u1, U.u2);
+	}
+
+	return state_x;
+}
+
+//The outcome determines weather the safety controller should be used or not
+bool decide(struct state current_state, struct command U){
+	//simulate the system from current state for 2 seconds
+	struct state x2 = simulate_fixed_control(current_state, U.u1, U.u2, 2);
+	if (x2.elevation > 0.-1 && x2.elevation < 0.1 && x2.pitch > -0.2 && x2.pitch < 0.2 && x2.d_elevation > -0.2 && x2.d_elevation < 0.2 && x2.d_pitch > -0.2 && x2.d_pitch < 0.2)
+		return true;
+	else
+		return false;
+}
+
 
 
 unsigned short int Q8_dacVTO( double nVoltage, int bBipolar, double nRange )
@@ -169,36 +254,23 @@ int main()
 	FILE *ofp;
 	ofp = fopen("recorded_data.txt", "w");
 
-	int johny[3];
+	int sensor_readings[3];
 
-	err = ioctl(File_Descriptor, Q8_ENC, johny);
+	err = ioctl(File_Descriptor, Q8_ENC, sensor_readings);
 	if(err != 0)
 	{
 		perror("Epic Fail first enc read\n");
 		return -1;
 	}
 
-	int base_travel = johny[0];
-	int base_pitch = johny[1];
-	int base_elevation = johny[2];
+	int base_travel = sensor_readings[0];
+	int base_pitch = sensor_readings[1];
+	int base_elevation = sensor_readings[2];
 
 
-	float elevation1 = 0;
-	float elevation2 = 0;
-
-	float pitch1 = 0;
-	float pitch2 = 0;
-
-	float travel1 = 0;
-	float travel2 = 0;
-
-	float int_elevation = 0;
-	float int_pitch = 0;
-	float int_travel = 0;	
-
-	float d_travel = 0;
-	float d_pitch = 0;
-	float d_elevation = 0;
+	double d_travel = 0;
+	double d_pitch = 0;
+	double d_elevation = 0;
 
 	for (step = 0 ; step < 15000 ; step++){
 
@@ -210,17 +282,16 @@ int main()
 
 		/* .. Reading the Encoder values from the helicopter......*/
 
-		err = ioctl(File_Descriptor, Q8_ENC, johny);
+		err = ioctl(File_Descriptor, Q8_ENC, sensor_readings);
 		if(err != 0)
 		{
 			perror("Epic Fail first enc read\n");
 			return -1;
 		}
 
-		int travel = johny[0] - base_travel;
-		int pitch = johny[1] - base_pitch;
-		int elevation = -(johny[2] - base_elevation)-300;
-
+		int travel = sensor_readings[0] - base_travel;
+		int pitch = sensor_readings[1] - base_pitch;
+		int elevation = -(sensor_readings[2] - base_elevation)-300;
 
 		printf("\n step: %d, travel = %d, pitch = %d, elevation = %d, left: %lf, right: %lf\n", step, travel, pitch , elevation, vol_left, vol_right); 
 
@@ -228,65 +299,25 @@ int main()
 			fprintf(ofp, "%d\t%d\t%d\t%d\t%lf\t%lf\n", step, travel, pitch, elevation, vol_right, vol_left);
 		}
 
-		float elevation_conv = 1.0/10.0 * 3.1415/180.0 * (float) elevation;
-		float pitch_conv =  90.0/1000.0 * 3.1415/180.0 * (float) pitch;
-		float travel_conv = (float) travel;
-
-		if (step < 50) {
+		if (step < 50 ){
 			vol_right = 0;
 			vol_left = 0;
 		}
-		else{
-			// elevation * 1/10 * 3.1415/180
-			// pitch * 90/1000 * 3.1415/180
+		else 
+		{
+			double elevation_conv = 1.0/10.0 * 3.1415/180.0 * (double) elevation;
+			double pitch_conv =  90.0/1000.0 * 3.1415/180.0 * (double) pitch;
+			double travel_conv = (double) travel;
 
-			printf("\n:info int_elevation: %lf elevation_conv: %lf int_pitch:%lf, pitch_conv:%lf\n", int_elevation, elevation_conv, int_pitch, pitch_conv);
+			if (decide(current_state, U)){
 
-			int_travel +=  travel_conv;
-			int_pitch +=  pitch_conv;
-			int_elevation +=  elevation_conv;
-
-			d_travel =  (travel_conv - travel1);
-			d_pitch  = (pitch_conv - pitch1);
-			d_elevation = (elevation_conv - elevation1);			
-
-
-			vol_right = -4.5 * elevation_conv  - .701 * pitch_conv  -25.7161 * d_elevation -3.051 * d_pitch -0.0333*int_elevation -0.001*int_pitch;
-			vol_left  = -4.5 * elevation_conv  + .5701 * pitch_conv -25.7529 * d_elevation +5.970 * d_pitch -0.03*int_elevation +0.001*int_pitch;
-
-
-
+			}
+			else {
+				struct U = controller(elevation_conv, pitch_conv, travel_conv);
+				vol_right = U.u1;
+				vol_left = U.u2;
+			}
 		}
-
-		elevation2 = elevation1;
-		elevation1 = elevation_conv;
-
-		pitch2 = pitch1;
-		pitch1 = pitch_conv;
-
-		travel2 = travel1;
-		travel1 = travel_conv;	
-
-		//else if(step < 140){ 
-		//	vol_right = 1.2;
-		//	vol_left = 1.235;			
-		//}
-		/*
-		   else if (step < 100) {
-		   vol_right = 1.26;
-		   vol_left =  1.285;
-		   }
-		   else if (step < 130){
-		   vol_right = 1.38;
-		   vol_left =  1.40;
-		   }
-
-		   else if ( step < 160){
-		//			vol_right = 1.50;
-		//			vol_left = 1.48;
-		}
-
-		 */		
 
 		if (vol_right > MAX_VOLTAGE ) 
 			vol_right = MAX_VOLTAGE;
@@ -297,10 +328,6 @@ int main()
 			vol_left = MAX_VOLTAGE;
 		else if (vol_left < -MAX_VOLTAGE)
 			vol_left = -MAX_VOLTAGE;
-
-
-		//vol_right = 0;
-		//vol_left = 0;
 
 		usleep (50000);
 	}
