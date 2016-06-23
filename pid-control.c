@@ -14,6 +14,23 @@
 
 double P[10] = {-1.000, -2.4000, -0.0943, 0.1200, 0.1200, -2.5000, -0.0200, 0.0600, 2.1000, 10.0000};
 
+
+struct controller_storage{
+	double int_elevation;
+	double int_pitch;
+	double int_travel;
+
+	double elevation1;
+	double pitch1;
+	double travel1;
+
+	double elevation2;
+	double pitch2;
+	double travel2;
+}controller_storage;
+
+
+
 struct state {
 	double elevation;
 	double pitch;
@@ -29,17 +46,26 @@ struct command{
 } command;
 
 double SIM_STEP = 0.01;
+pthread_t tid;
+int record =1;
 
-struct state eval_state(struct state state_x, u1, u2){
+double MAX_VOLTAGE = 2.5;
+
+
+double vol_right = 0;
+double vol_left = 0;
+
+
+struct state eval_state(struct state state_x, struct command U){
 
 	struct state d_state;
 
 	d_state.elevation = state_x.d_elevation;
 	d_state.pitch = state_x.d_pitch;
 	d_state.travel = state_x.d_travel;
-	d_state.d_elevation = P[1]*cos(state_x.elevation)+ P[2]*sin(state_x.elevation) 			+ P[8]*cos(state_x.pitch)*(u1+u2) ; 
-	d_state.d_pitch = P[5]*sin(state_x.pitch) + P[4]*cos(state_x.pitch)+ P[6]*state_x.d_pitch	+ P[9]*(u1-u2);
-	d_state.d_travel = P[7]*state_x.d_travel							+ P[10]*sin(state_x.pitch)*(u1+u2);
+	d_state.d_elevation = P[1]*cos(state_x.elevation)+ P[2]*sin(state_x.elevation) 			+ P[8]*cos(state_x.pitch)*(U.u1+U.u2) ; 
+	d_state.d_pitch = P[5]*sin(state_x.pitch) + P[4]*cos(state_x.pitch)+ P[6]*state_x.d_pitch	+ P[9]*(U.u1-U.u2);
+	d_state.d_travel = P[7]*state_x.d_travel							+ P[10]*sin(state_x.pitch)*(U.u1+U.u2);
 
 	state_x.elevation += SIM_STEP*d_state.elevation;
 	state_x.pitch += SIM_STEP*d_state.pitch;
@@ -51,92 +77,74 @@ struct state eval_state(struct state state_x, u1, u2){
 	return state_x;
 
 }
-
-double elevation1 = 0;
-double elevation2 = 0;
-
-double pitch1 = 0;
-double pitch2 = 0;
-
-double travel1 = 0;
-double travel2 = 0;
-
-double int_elevation = 0;
-double int_pitch = 0;
-double int_travel = 0;	
-
-
-
-
-struct command controller(double elevation_conv, double pitch_conv, double travel_conv){
+struct command controller_safety(struct state x, struct controller_storage* cs){
 
 	struct command U;
 
 	//printf("\n:info int_elevation: %lf elevation_conv: %lf int_pitch:%lf, pitch_conv:%lf\n", int_elevation, elevation_conv, int_pitch, pitch_conv);
 
-	int_travel +=  travel_conv;
-	int_pitch +=  pitch_conv;
-	int_elevation +=  elevation_conv;
+	cs->int_travel +=  x.travel;
+	cs->int_pitch +=  x.pitch;
+	cs->int_elevation +=  x.elevation;
 
-	d_travel =  (travel_conv - travel1);
-	d_pitch  = (pitch_conv - pitch1);
-	d_elevation = (elevation_conv - elevation1);			
+	double d_travel =  (x.travel - cs->travel1);
+	double d_pitch  = (x.pitch - cs->pitch1);
+	double d_elevation = (x.elevation - cs->elevation1);			
 
-	U.u1 = -4.5 * elevation_conv  - .701 * pitch_conv  -25.7161 * d_elevation -3.051 * d_pitch -0.0333*int_elevation -0.001*int_pitch;
-	U.u2  = -4.5 * elevation_conv  + .5701 * pitch_conv -25.7529 * d_elevation +5.970 * d_pitch -0.03*int_elevation +0.001*int_pitch;
+	U.u1 = -4.5 * x.elevation  - .701 * x.pitch  -25.7161 * d_elevation -3.051 * d_pitch -0.0333*cs->int_elevation -0.001*cs->int_pitch;
+	U.u2  = -4.5 * x.elevation  + .5701 * x.pitch -25.7529 * d_elevation +5.970 * d_pitch -0.03*cs->int_elevation +0.001*cs->int_pitch;
 
-	elevation2 = elevation1;
-	elevation1 = elevation_conv;
+	cs->elevation2 = cs->elevation1;
+	cs->elevation1 = x.elevation;
 
-	pitch2 = pitch1;
-	pitch1 = pitch_conv;
+	cs->pitch2 = cs->pitch1;
+	cs->pitch1 = x.pitch;
 
-	travel2 = travel1;
-	travel1 = travel_conv;	
+	cs->travel2 = cs->travel1;
+	cs->travel1 = x.travel;	
 
 	return U;
 }
 
+struct command controller_complex(struct state x, struct controller_storage* cs){
+	struct command U;
+	U.u1 = 0; //MAX_VOLTAGE;
+	U.u2 = 0; //MAX_VOLTAGE;
+	return U;
+}
 
-struct state simulate_fixed_control(struct state init_state, double u1, double u2, double time){
+struct state simulate_fixed_control(struct state init_state, struct command U, double time){
 
 	struct state state_x;
 
 	state_x = init_state;
+	printf("comm u1:%lf u2:%lf\n", U.u1, U.u2);
+	printf("sim init: elevation: %lf, pitch: %lf, travel: %lf, d_elevation: %lf, d_pitch: %lf, d_travel: %lf\n", init_state.elevation, init_state.pitch, init_state.travel, init_state.d_elevation, init_state.d_pitch, init_state.d_travel);
 
 	int steps = time/SIM_STEP;
 	int k = 0;
 	for (k = 0; k <steps; k++){
-		state_x = eval_state(state_x, u1, u2);
+		state_x = eval_state(state_x, U);
 	}
+
+	printf("sim fina: elevation: %lf, pitch: %lf, travel: %lf, d_elevation: %lf, d_pitch: %lf, d_travel: %lf\n", state_x.elevation, state_x.pitch, state_x.travel, state_x.d_elevation, state_x.d_pitch, state_x.d_travel);
 
 	return state_x;
 }
 
-struct state simulate_with_control(struct state init_state, double time){
-
-	struct state state_x;
-
-	state_x = init_state;
-
-	int steps = time/SIM_STEP;
-	int k = 0;
-	for (k = 0; k <steps; k++){
-		struct command U = controller(double elevation, double pitch, double travel);
-		state_x = eval_state(state_x, U.u1, U.u2);
-	}
-
-	return state_x;
-}
 
 //The outcome determines weather the safety controller should be used or not
-bool decide(struct state current_state, struct command U){
+int decide(struct state current_state, struct command U){
 	//simulate the system from current state for 2 seconds
-	struct state x2 = simulate_fixed_control(current_state, U.u1, U.u2, 2);
-	if (x2.elevation > 0.-1 && x2.elevation < 0.1 && x2.pitch > -0.2 && x2.pitch < 0.2 && x2.d_elevation > -0.2 && x2.d_elevation < 0.2 && x2.d_pitch > -0.2 && x2.d_pitch < 0.2)
-		return true;
+	struct state x2 = simulate_fixed_control(current_state, U, 0.4);
+	printf ("sim results: elev: %lf\n", x2.elevation);
+	if (x2.elevation > -0.2 && x2.elevation < 0.2 && x2.d_elevation > -1 && x2.d_elevation < 1 && x2.pitch > -0.2 && x2.pitch < 0.2 && x2.d_pitch > -0.2 && x2.d_pitch < 0.2)
+	{
+		printf("decided 1\n");
+		return 1;
+	}
 	else
-		return false;
+		return 0;
 }
 
 
@@ -171,15 +179,6 @@ unsigned short int Q8_dacVTO( double nVoltage, int bBipolar, double nRange )
 			return (unsigned short int)(nVoltage / nOneLSB);
 	}
 }
-
-pthread_t tid;
-int record =1;
-
-double MAX_VOLTAGE = 2.5;
-
-
-double vol_right = 0;
-double vol_left = 0;
 
 
 void* get_keyboard(void *arg){
@@ -272,6 +271,18 @@ int main()
 	double d_pitch = 0;
 	double d_elevation = 0;
 
+	struct controller_storage storage_safety;
+	storage_safety.int_travel = 0;
+	storage_safety.int_pitch = 0;
+	storage_safety.int_elevation = 0;
+
+	struct controller_storage storage_complex;
+	storage_complex.int_travel = 0;
+	storage_complex.int_pitch = 0;
+	storage_complex.int_elevation = 0;
+
+	struct controller_storage storage; //for the current loop
+
 	for (step = 0 ; step < 15000 ; step++){
 
 		unsigned short int tmparray[4];
@@ -293,6 +304,7 @@ int main()
 		int pitch = sensor_readings[1] - base_pitch;
 		int elevation = -(sensor_readings[2] - base_elevation)-300;
 
+
 		printf("\n step: %d, travel = %d, pitch = %d, elevation = %d, left: %lf, right: %lf\n", step, travel, pitch , elevation, vol_left, vol_right); 
 
 		if (record == 1){
@@ -305,35 +317,57 @@ int main()
 		}
 		else 
 		{
-			double elevation_conv = 1.0/10.0 * 3.1415/180.0 * (double) elevation;
-			double pitch_conv =  90.0/1000.0 * 3.1415/180.0 * (double) pitch;
-			double travel_conv = (double) travel;
+			struct state cs;
 
-			if (decide(current_state, U)){
+			cs.elevation = 1.0/10.0 * 3.1415/180.0 * (double) elevation;
+			cs.pitch =  90.0/1000.0 * 3.1415/180.0 * (double) pitch;
+			cs.travel = (double) travel;
+
+			cs.d_travel =  (cs.travel - storage.travel2)/0.1;
+			cs.d_pitch  = (cs.pitch - storage.pitch2)/0.1;
+			cs.d_elevation = (cs.elevation - storage.elevation2)/0.1;			
+
+			storage.elevation2 = storage.elevation1;
+			storage.elevation1 = cs.elevation;
+
+			storage.pitch2 = storage.pitch1;
+			storage.pitch1 = cs.pitch;
+
+			storage.travel2 = storage.travel1;
+			storage.travel1 = cs.travel;			
+
+			struct command U_safety = controller_safety(cs, &storage_safety);
+			struct command U_complex = controller_complex(cs, &storage_complex);		
+
+			if (decide(cs, U_complex) == 1){
+				//			if(0 == 1) {
+				printf("complex controller\n");
+				vol_right = U_complex.u1;
+				vol_left = U_complex.u2;
 
 			}
 			else {
-				struct U = controller(elevation_conv, pitch_conv, travel_conv);
-				vol_right = U.u1;
-				vol_left = U.u2;
+				printf("safety controller\n");
+				vol_right = U_safety.u1;
+				vol_left = U_safety.u2;
 			}
+			}
+
+			if (vol_right > MAX_VOLTAGE ) 
+				vol_right = MAX_VOLTAGE;
+			else if (vol_right < -MAX_VOLTAGE)
+				vol_right = -MAX_VOLTAGE;
+
+			if (vol_left > MAX_VOLTAGE) 
+				vol_left = MAX_VOLTAGE;
+			else if (vol_left < -MAX_VOLTAGE)
+				vol_left = -MAX_VOLTAGE;
+
+			usleep (50000);
 		}
-
-		if (vol_right > MAX_VOLTAGE ) 
-			vol_right = MAX_VOLTAGE;
-		else if (vol_right < -MAX_VOLTAGE)
-			vol_right = -MAX_VOLTAGE;
-
-		if (vol_left > MAX_VOLTAGE) 
-			vol_left = MAX_VOLTAGE;
-		else if (vol_left < -MAX_VOLTAGE)
-			vol_left = -MAX_VOLTAGE;
-
-		usleep (50000);
+		fclose(ofp);	
+		return 0;
 	}
-	fclose(ofp);	
-	return 0;
-}
 
 
 
