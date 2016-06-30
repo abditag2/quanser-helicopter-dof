@@ -49,7 +49,7 @@ struct command{
 
 double SIM_STEP = 0.01;
 double PERIOD = 0.05;
-
+double RESTART_TIME  = 0.4;
 pthread_t tid;
 int record =1;
 
@@ -128,11 +128,6 @@ struct command controller_safety(struct state x, struct controller_storage* cs){
 
 struct command controller_complex(struct state x, struct controller_storage* cs){
 	struct command U;
-	//	U.u1 = 2; //MAX_VOLTAGE;
-	//	U.u2 = 2; //MAX_VOLTAGE;
-
-
-
 	//printf("\n:info int_elevation: %lf elevation_conv: %lf int_pitch:%lf, pitch_conv:%lf\n", int_elevation, elevation_conv, int_pitch, pitch_conv);
 
 	cs->int_travel +=  x.travel;
@@ -143,8 +138,8 @@ struct command controller_complex(struct state x, struct controller_storage* cs)
 	//	U.u1 = 1+ -6.5 * x.elevation  - 3.01 * (x.pitch + 0.08)  -25.7161 * x.d_elevation ;//-3.051 * x.d_pitch; //-.0333*cs->int_elevation -0.001*cs->int_pitch;
 	//	U.u2  = 1 + -6.5 * x.elevation  + 5.5701 * (x.pitch + 0.08) -25.7529 * x.d_elevation; // +5.970 * x.d_pitch; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
-	U.u1 =   -9.5 * x.elevation  - .701 * x.pitch  -45.7161 * PERIOD * x.d_elevation -3.051 * PERIOD * x.d_pitch ; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
-	U.u2  =  -9.5 * x.elevation  + .5701 * x.pitch -45.7529 * PERIOD * x.d_elevation +5.970 * PERIOD * x.d_pitch; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
+	U.u1 =   -9.5 * x.elevation  - .701 * (x.pitch-0.2)  -45.7161 * PERIOD * x.d_elevation -3.051 * PERIOD * x.d_pitch + 0.2 * x.travel; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
+	U.u2  =  -9.5 * x.elevation  + .5701 * (x.pitch-0.2)  -45.7529 * PERIOD * x.d_elevation +5.970 * PERIOD * x.d_pitch - 0.2 * x.travel; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
 
 
@@ -170,7 +165,7 @@ struct command controller_complex(struct state x, struct controller_storage* cs)
 
 int check_safety(struct state x){
 
-	if (x.elevation+0.333*x.pitch > -0.2 && x.elevation-0.333*x.pitch>-0.2  && x.elevation < 0.35 && x.d_elevation > -0.3 && x.d_elevation < 0.4  && x.d_pitch > -0.8 && x.d_pitch < 0.8)
+	if (x.elevation+0.333*x.pitch > -0.3 && x.elevation-0.333*x.pitch>-0.3  && x.elevation < 0.35 && x.d_elevation > -0.3 && x.d_elevation < 0.4  && x.d_pitch > -1.3 && x.d_pitch < 1.3)
 	{
 		return 1;
 	}
@@ -246,8 +241,8 @@ struct state simulate_with_controller(struct state init_state, double time){
 //The outcome determines weather the safety controller should be used or not
 int decide(struct state current_state, struct command U, double time){
 	//struct state x2 = simulate_fixed_control(current_state, U, time);
-	struct state x2 = simulate_fixed_control(current_state, U, 0.05);
-	struct state x10 = simulate_with_controller(x2, 0.4);
+	struct state x2 = simulate_fixed_control(current_state, U, RESTART_TIME);
+	struct state x10 = simulate_with_controller(x2, 1);
 	printf ("sim results: elev: %lf %d %d\n", x2.elevation, x2.safe, x10.safe);
 
 	if (x2.safe == 1 && x10.safe == 1)
@@ -419,7 +414,7 @@ int main()
 
 		cs.elevation = 1.0/10.0 * 3.1415/180.0 * (double) elevation;
 		cs.pitch =  90.0/1000.0 * 3.1415/180.0 * (double) pitch;
-		cs.travel = (double) travel;
+		cs.travel = 3.1415/4089.00 * (double) travel;
 
 		cs.d_travel =  (cs.travel - storage.travel1)/PERIOD;
 		cs.d_pitch  = (cs.pitch - storage.pitch1)/PERIOD;
@@ -450,11 +445,11 @@ int main()
 			struct command U_safety = controller_safety(cs, &storage_safety);
 			struct command U_complex = controller_complex(cs, &storage_complex);		
 			printf("remaining_cycle %d\n", remaining_safety_cycles);
-			if (decide(cs, U_complex, 0.2) == 1 && (remaining_safety_cycles <= 0 || remaining_safety_cycles == 60)){
+
+			if (decide(cs, U_complex, 0.2) == 1 && (remaining_safety_cycles <= 0 )){
 				printf("complex controller\n");
 				vol_right = U_complex.u1;
 				vol_left = U_complex.u2;
-				//	remaining_safety_cycles = 60 ; 
 			}
 			else {
 				printf("safety controller\n");
@@ -464,20 +459,19 @@ int main()
 			}
 		}
 
-		/*
-		   if(step % 200 == 0){
 
-		   printf("restart\n");
-		   usleep(200000);
-		   remaining_safety_cycles = 60;
+		if(step % 200 == 0){
 
-		   }
-		 */
+			printf("restart\n");
+			usleep(RESTART_TIME *1000000.0);
+			remaining_safety_cycles = 60;
 
-		//		vol_right = 0;
-		//		vol_left = 0;
+		}
 
-		//		printf ("elev -1/3* pitch : %lf elev + 1.0/3.0*pitch: %lf\n", cs.elevation-0.3333*cs.pitch, cs.elevation + 0.3333*cs.pitch);
+
+//		vol_right = 0;
+//		vol_left = 0;
+//		printf ("elev -1/3* pitch : %lf elev + 1.0/3.0*pitch: %lf\n", cs.elevation-0.3333*cs.pitch, cs.elevation + 0.3333*cs.pitch);
 
 		if (vol_right > MAX_VOLTAGE ) 
 			vol_right = MAX_VOLTAGE;
@@ -492,9 +486,7 @@ int main()
 
 		vol_right = voltage_max_min(vol_right);
 		vol_left = voltage_max_min(vol_left);
-		double sleep_time = PERIOD * 1000000.0;
-		printf("sleep time : %lf\n", sleep_time);
-		usleep ((int) sleep_time);
+		usleep ((int) (PERIOD * 1000000.0));
 	}
 	fclose(ofp);	
 	return 0;
