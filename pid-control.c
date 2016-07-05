@@ -6,14 +6,89 @@
 #include <pthread.h>
 #include <math.h>
 
-
 /*  #define DRIVER_NAME "./test"*/
 #define Q8_DAC_RESOLUTION  (12)
 #define Q8_DAC_ZERO        (0x0800)
 #define DEBUG 0
 
+double P[10] = {-0.500, -2.4000, 0.00,  0.1200, 0.1200, -2.5000, -0.0200, 0.200, 2.1000, 10.0000};
 
-double P[10] = {-1.000, -2.4000, 0.00,  0.1200, 0.1200, -2.5000, -0.0200, 0.200, 2.1000, 10.0000};
+double Hx[34][6] = {  
+
+	{-0.948683,-0.316228,0.000000,0.000000,0.000000,0.000000},
+//	{1.000000,0.000000,0.000000,0.000000,0.000000,0.000000},
+	{0.000000,1.000000,0.000000,0.000000,0.000000,0.000000},
+	{0.000000,0.000000,0.000000,1.000000,0.000000,0.000000},
+	{0.000000,0.000000,0.000000,0.000000,1.000000,0.000000},
+	{-0.948683,0.316228,0.000000,0.000000,0.000000,0.000000},
+	{0.000000,-1.000000,0.000000,0.000000,0.000000,0.000000},
+	{0.000000,0.000000,0.000000,-1.000000,0.000000,0.000000},
+	{0.000000,0.000000,0.000000,0.000000,-1.000000,0.000000},
+	{0.000000,-0.980581,0.000000,0.000000,-0.196116,0.000000},
+	{-0.976164,-0.092968,0.000000,-0.195233,-0.018594,0.000000},
+	{-0.948628,0.196634,0.000000,-0.245527,0.034012,0.000000},
+	{0.896258,0.256074,0.000000,0.358503,0.051215,0.000000},
+	{0.980030,0.031112,0.000000,0.196006,0.012445,0.000000},
+	{0.976164,0.092968,0.000000,0.195233,0.018594,0.000000},
+	{-0.948628,-0.196634,0.000000,-0.245527,-0.034012,0.000000},
+	{-0.924294,-0.088028,0.000000,-0.369718,-0.035211,0.000000},
+	{0.924294,-0.088028,0.000000,0.369718,-0.035211,0.000000},
+	{-0.947201,0.209313,0.000000,-0.240390,0.034805,0.000000},
+	{-0.931312,0.310437,0.000000,-0.186262,0.039913,0.000000},
+	{0.000000,0.980581,0.000000,0.000000,0.196116,0.000000},
+	{0.980030,-0.031112,0.000000,0.196006,-0.012445,0.000000},
+	{0.980581,0.000000,0.000000,0.196116,0.000000,0.000000},
+	{-0.930261,-0.310087,0.000000,-0.186052,-0.062017,0.000000},
+	{-0.947201,-0.209313,0.000000,-0.240390,-0.034805,0.000000},
+	{0.924294,0.088028,0.000000,0.369718,0.035211,0.000000},
+	{-0.976164,0.092968,0.000000,-0.195233,0.018594,0.000000},
+	{-0.930261,0.310087,0.000000,-0.186052,0.062017,0.000000},
+	{-0.935982,0.231767,0.000000,-0.262075,0.039222,0.000000},
+	{0.896258,-0.256074,0.000000,0.358503,-0.051215,0.000000},
+	{0.976164,-0.092968,0.000000,0.195233,-0.018594,0.000000},
+	{-0.935982,-0.231767,0.000000,-0.262075,-0.039222,0.000000},
+	{-0.931312,-0.310437,0.000000,-0.186262,-0.039913,0.000000},
+	{-0.924294,0.088028,0.000000,-0.369718,0.035211,0.000000},
+};
+
+double hx[34][1] ={
+	{0.125968},
+//	{0.219471},
+	{0.932452},
+	{0.199735},
+	{1.300000},
+	{0.125968},
+	{0.932452},
+	{0.3},
+//	{0.199735},
+	{1.300000},
+	{1.120267},
+	{0.149140},
+	{0.161673},
+	{0.507180},
+	{0.270233},
+	{0.320451},
+	{0.161673},
+	{0.196673},
+	{0.358882},
+	{0.162316},
+	{0.171114},
+	{1.120267},
+	{0.270233},
+	{0.234821},
+	{0.188640},
+	{0.162316},
+	{0.358882},
+	{0.149140},
+	{0.188640},
+	{0.172952},
+	{0.507180},
+	{0.320451},
+	{0.172952},
+	{0.171114},
+	{0.196673},
+};
+
 
 
 struct controller_storage{
@@ -62,6 +137,23 @@ double vol_left = 0;
 
 double add_left = 0;
 double add_right = 0 ;
+
+double C[34][1];
+void matrix_mult(double A[34][6], double B[6][1], int m, int n, int k){
+
+	int r = 0;
+	int c = 0; 
+	int kk = 0;
+	for ( r = 0 ; r < m; r ++){
+		for (c = 0; c < n; c ++ ){
+			C[r][c] = 0 ;
+			for ( kk = 0 ; kk < k ; kk ++){
+				C[r][c] += A[r][kk] * B[kk][c] ;  
+			}
+		}
+	}
+
+}
 
 double voltage_max_min(double voltage){
 
@@ -138,8 +230,8 @@ struct command controller_complex(struct state x, struct controller_storage* cs)
 	//	U.u1 = 1+ -6.5 * x.elevation  - 3.01 * (x.pitch + 0.08)  -25.7161 * x.d_elevation ;//-3.051 * x.d_pitch; //-.0333*cs->int_elevation -0.001*cs->int_pitch;
 	//	U.u2  = 1 + -6.5 * x.elevation  + 5.5701 * (x.pitch + 0.08) -25.7529 * x.d_elevation; // +5.970 * x.d_pitch; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
-	U.u1 =   -9.5 * x.elevation  - .701 * (x.pitch-0.2)  -45.7161 * PERIOD * x.d_elevation -3.051 * PERIOD * x.d_pitch + 0.2 * x.travel; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
-	U.u2  =  -9.5 * x.elevation  + .5701 * (x.pitch-0.2)  -45.7529 * PERIOD * x.d_elevation +5.970 * PERIOD * x.d_pitch - 0.2 * x.travel; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
+	U.u1 =   -1.5 * x.elevation  - .701 * (x.pitch-0.2)  -45.7161 * PERIOD * x.d_elevation -3.051 * PERIOD * x.d_pitch + 0.2 * x.travel; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
+	U.u2  =  -1.5 * x.elevation  + .5701 * (x.pitch-0.2)  -45.7529 * PERIOD * x.d_elevation +5.970 * PERIOD * x.d_pitch - 0.2 * x.travel; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
 
 
@@ -165,7 +257,32 @@ struct command controller_complex(struct state x, struct controller_storage* cs)
 
 int check_safety(struct state x){
 
-	if (x.elevation+0.333*x.pitch > -0.3 && x.elevation-0.333*x.pitch>-0.3  && x.elevation < 0.35 && x.d_elevation > -0.3 && x.d_elevation < 0.4  && x.d_pitch > -1.3 && x.d_pitch < 1.3)
+	double X [6][1] = {{x.elevation}, {x.pitch}, {x.travel}, {x.d_elevation}, {x.d_pitch}, {x.d_travel}};
+
+	matrix_mult(Hx, X, 34, 1, 6);
+
+	int all_small = 1;
+	int k = 0;
+	for (k = 0 ; k < 34 ; k++){
+		if(C[k][0] > hx[k][0]){
+
+			all_small = 0;
+			int rr = 0 ;
+			printf("\n\n\n");
+
+				printf("%d\n", k);
+			for ( rr = 0 ; rr < 34; rr++){
+				printf ("%d \t  hx: %f rr: %lf\n", rr, hx[rr][0], C[rr][0]);
+			}
+
+
+			break;
+		}
+
+	}
+
+	//	if (x.elevation+0.333*x.pitch > -0.3 && x.elevation-0.333*x.pitch>-0.3  && x.elevation < 0.35 && x.d_elevation > -0.3 && x.d_elevation < 0.4  && x.d_pitch > -1.3 && x.d_pitch < 1.3)
+	if(all_small == 1)
 	{
 		return 1;
 	}
@@ -315,6 +432,9 @@ void* get_keyboard(void *arg){
 
 int main()
 {
+
+
+
 	int File_Descriptor, i, j; /**/
 	int Return_Value ; /*To catch the return value .......*/
 	char Buffer[Q8_EXAMPLE2_MAXLEN] ;
@@ -446,7 +566,9 @@ int main()
 			struct command U_complex = controller_complex(cs, &storage_complex);		
 			printf("remaining_cycle %d\n", remaining_safety_cycles);
 
-			if (decide(cs, U_complex, 0.2) == 1 && (remaining_safety_cycles <= 0 )){
+
+
+			if (decide(cs, U_complex, 0.2) == 1 && (remaining_safety_cycles <= 0 )  ) {
 				printf("complex controller\n");
 				vol_right = U_complex.u1;
 				vol_left = U_complex.u2;
@@ -469,9 +591,9 @@ int main()
 		}
 
 
-//		vol_right = 0;
-//		vol_left = 0;
-//		printf ("elev -1/3* pitch : %lf elev + 1.0/3.0*pitch: %lf\n", cs.elevation-0.3333*cs.pitch, cs.elevation + 0.3333*cs.pitch);
+		//		vol_right = 0;
+		//		vol_left = 0;
+		//		printf ("elev -1/3* pitch : %lf elev + 1.0/3.0*pitch: %lf\n", cs.elevation-0.3333*cs.pitch, cs.elevation + 0.3333*cs.pitch);
 
 		if (vol_right > MAX_VOLTAGE ) 
 			vol_right = MAX_VOLTAGE;
