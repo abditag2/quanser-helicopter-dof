@@ -45,23 +45,34 @@ unsigned short int Q8_dacVTO( double nVoltage, int bBipolar, double nRange )
 pthread_t tid;
 int record =1;
 
+double vol_right = 0;
+double vol_left = 0;
+
+
 void* get_keyboard(void *arg){
 	
 	while(1){
 		char in;
 		scanf("%c", &in);
 		if (in == '1'){
-			printf("recording started\n");
-			record = 1;
+			//printf("recording started\n");
+			//record = 1;i
+			vol_left = vol_left - 0.01;
 		}
-		else if (in == '0'){
-			record = 0;
-			printf("recording ended\n");
+		else if (in == '2'){
+			vol_left = vol_left + 0.01;
+			//record = 0;
+			//printf("recording ended\n");
 		}
-		sleep(1);
+		else if (in == '='){	
+			vol_right = vol_right + 0.01;
+		}
+		else if (in == '-'){
+			vol_right = vol_right - 0.01;
+		}
+		usleep(30000);
 	}
 }
-
 
 
 
@@ -105,59 +116,88 @@ int main()
 	/* .. Writing the control values to the left and write motor......*/
 
 	int step = 0;
-	double vol_right = 0;
-	double vol_left = 0;
-
 	double vol_step = 0.1; 	
 
 	FILE *ofp;
 	ofp = fopen("recorded_data.txt", "w");
 	
-	for (step = 0 ; step < 5000 ; step++){
-		if (step < 400) {
-			vol_right = -1.1;
-			vol_left = 1.135;			
-		}
-		else if (step >= 400 && step < 1000) {
-			vol_right = -1.2;
-			vol_left = 1.245;
-		}
-		else if (step >=1000 && step <1050){
-			vol_right = 1.3;
-			vol_left = 1.34;
-		}
-		else if (step >= 1050 && step < 4000){
-			vol_right = 1.3;
-			vol_left = 1.33;
-		}
-		else if (step >= 4000){
-			vol_right = 0;
-			vol_left = 0;
-		}
+	int johny[3];
 
-//		vol_right = 0 ;
-//		vol_left = 0 ;
+	err = ioctl(File_Descriptor, Q8_ENC, johny);
+	if(err != 0)
+	{
+		perror("Epic Fail first enc read\n");
+		return -1;
+	}
+
+	int base_travel = johny[0];
+	int base_pitch = johny[1];
+	int base_elevation = johny[2];
+
+	for (step = 0 ; step < 15000 ; step++){
 
 		unsigned short int tmparray[4];
 		tmparray[0] = Q8_dacVTO((vol_right), 1, 10);
 		tmparray[1] = Q8_dacVTO((vol_left), 1, 10);
 		ioctl(File_Descriptor, Q8_WR_DAC, tmparray);
 
-		int johny[3];
 	
 		/* .. Reading the Encoder values from the helicopter......*/
 	
-		int err = ioctl(File_Descriptor, Q8_ENC, johny);
+		err = ioctl(File_Descriptor, Q8_ENC, johny);
 		if(err != 0)
 		{
 			perror("Epic Fail first enc read\n");
 			return -1;
 		}
-		printf("\n step: %d, travel = %d, pitch = %d, elevation = %d, right: %lf, left: %lf\n", step, johny[0], johny[1]-5034, johny[2], vol_right, vol_left); 
+
+		printf("\n step: %d, travel = %d, pitch = %d, elevation = %d, left: %lf, right: %lf\n", step, johny[0]-base_travel, johny[1] -base_pitch , -(johny[2]-base_elevation)- 350, vol_left, vol_right); 
+
+
+
 		if (record == 1){
-			fprintf(ofp, "%d\t%d\t%d\t%d\t%lf\t%lf\n", step, johny[0], johny[1], johny[2], vol_right, vol_left);
+			fprintf(ofp, "%d\t%d\t%d\t%d\t%lf\t%lf\n", step, johny[0]-base_travel, johny[1]-base_pitch, -(johny[2] -base_elevation) - 350, vol_right, vol_left);
 		}
-		usleep (10000);
+
+
+		if (step < 50) {
+			vol_right = 0;
+			vol_left = 0;
+		}
+		//else if(step < 140){ 
+		//	vol_right = 1.2;
+		//	vol_left = 1.235;			
+		//}
+		else if (step < 100) {
+			vol_right = 1.26;
+			vol_left =  1.285;
+		}
+		else if (step < 130){
+			vol_right = 1.38;
+			vol_left =  1.40;
+		}
+
+		else if ( step < 160){
+//			vol_right = 1.50;
+//			vol_left = 1.48;
+		}
+		
+
+		if (vol_right > 1.8 ) 
+			vol_right = 1.8;
+		else if (vol_right < -1.8)
+			vol_right = -1.8;
+
+		if (vol_left > 1.8 ) 
+			vol_left = 1.8;
+		else if (vol_left < -1.8)
+			vol_left = -1.8;
+
+
+		//vol_right = 0;
+		//vol_left = 0;
+
+		usleep (50000);
 	}
 	fclose(ofp);	
 	return 0;
