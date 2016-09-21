@@ -249,9 +249,9 @@ struct command controller_safety(struct state sp, struct state x, struct control
 	cs->int_elevation +=  x.elevation;
 
 	//right
-	U.u1 = -1.2 * (x.elevation-sp.elevation) - .201 * x.pitch  - 10.7161 * PERIOD * x.d_elevation -.40 * PERIOD * x.d_pitch ; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
+	U.u1 = 0.01 + -1.3 * (x.elevation-sp.elevation) - .151 * x.pitch  - 20.7161 * PERIOD * x.d_elevation -.70 * PERIOD * x.d_pitch ; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
 	//left
-	U.u2 = 0.05 +  -1.2 * (x.elevation-sp.elevation) + .221 * x.pitch - 10.7529 * PERIOD * x.d_elevation +.50 * PERIOD*  x.d_pitch; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
+	U.u2 =   -1.3 * (x.elevation-sp.elevation) + .171 * x.pitch - 20.7529 * PERIOD * x.d_elevation +.90 * PERIOD*  x.d_pitch; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
 	cs->elevation2 = cs->elevation1;
 	cs->elevation1 = x.elevation;
