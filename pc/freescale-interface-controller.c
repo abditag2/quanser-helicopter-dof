@@ -18,6 +18,7 @@
 #include <stdio.h>
 
 #define SERIAL_DATA_SIZE 9
+#define MAX_VOLTAGE 2.0
 
 int set_interface_attribs (int fd, int speed, int parity)
 {
@@ -329,6 +330,17 @@ int main()
 		usleep(5000);
 		vol_right = commands[0];
 		vol_left = commands[1];
+
+
+            if (vol_right > MAX_VOLTAGE)
+                vol_right = MAX_VOLTAGE;
+            else if (vol_right < -MAX_VOLTAGE)
+                vol_right = -MAX_VOLTAGE;
+
+            if (vol_left > MAX_VOLTAGE)
+                vol_left = MAX_VOLTAGE;
+            else if (vol_left < -MAX_VOLTAGE)
+                vol_left = -MAX_VOLTAGE;
 
 		unsigned short int tmparray[4];
 		tmparray[0] = Q8_dacVTO((vol_right), 1, 10);
