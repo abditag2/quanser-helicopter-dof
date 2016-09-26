@@ -93,117 +93,87 @@ uint8_t rxChar = 0;
 double P[10] = {-.500, -2.4000, 0.00, 0.1200, 0.1200, -2.5000, -0.0200, 0.200, 2.1000, 10.0000};
 
 double Hx[HX_SIZE][6] = {
-
-        {-0.948683, -0.316228, 0, 0.000000,  0.000000,  0},
-        {1.000000,  0.000000,  0, 0.000000,  0.000000,  0},
-        {0.000000,  1.000000,  0, 0.000000,  0.000000,  0},
-        {0.000000,  0.000000,  0, 1.000000,  0.000000,  0},
-        {0.000000,  0.000000,  0, 0.000000,  1.000000,  0},
-        {-0.948683, 0.316228,  0, 0.000000,  0.000000,  0},
-        {-1.000000, 0.000000,  0, 0.000000,  0.000000,  0},
-        {0.000000,  -1.000000, 0, 0.000000,  0.000000,  0},
-        {0.000000,  0.000000,  0, -1.000000, 0.000000,  0},
-        {0.000000,  0.000000,  0, 0.000000,  -1.000000, 0},
-        {0.000000,  0.980581,  0, 0.000000,  0.196116,  0},
-        {0.976164,  0.092968,  0, 0.195233,  0.018594,  0},
-        {0.000000,  -0.980581, 0, 0.000000,  -0.196116, 0},
-        {-0.975088, 0.038239,  0, -0.217961, 0.015296,  0},
-        {-0.976164, 0.092968,  0, -0.195233, 0.018594,  0},
-        {-0.930261, 0.310087,  0, -0.186052, 0.062017,  0},
-        {0.980030,  -0.031112, 0, 0.196006,  -0.012445, 0},
-        {-0.975088, -0.038239, 0, -0.217961, -0.015296, 0},
-        {-0.884112, 0.160748,  0, -0.434019, 0.064299,  0},
-        {0.896258,  -0.256074, 0, 0.358503,  -0.051215, 0},
-        {0.980581,  0.000000,  0, 0.196116,  0.000000,  0},
-        {0.980030,  0.031112,  0, 0.196006,  0.012445,  0},
-        {-0.920002, 0.036079,  0, -0.389648, 0.021647,  0},
-        {-0.980581, 0.000000,  0, -0.196116, 0.000000,  0},
-        {-0.927490, -0.206109, 0, -0.309163, -0.041222, 0},
-        {-0.945330, -0.171878, 0, -0.275005, -0.034376, 0},
-        {-0.924294, 0.088028,  0, -0.369718, 0.035211,  0},
-        {-0.880102, 0.117347,  0, -0.457653, 0.046939,  0},
-        {-0.945330, 0.171878,  0, -0.275005, 0.034376,  0},
-        {-0.927490, 0.206109,  0, -0.309163, 0.041222,  0},
-        {-0.931312, 0.310437,  0, -0.186262, 0.039913,  0},
-        {0.927929,  0.029458,  0, 0.371171,  0.017675,  0},
-        {0.928477,  0.000000,  0, 0.371391,  0.000000,  0},
-        {0.896258,  0.256074,  0, 0.358503,  0.051215,  0},
-        {0.791602,  -0.376953, 0, 0.474961,  -0.075391, 0},
-        {0.791602,  0.376953,  0, 0.474961,  0.075391,  0},
-        {0.927929,  -0.029458, 0, 0.371171,  -0.017675, 0},
-        {0.976164,  -0.092968, 0, 0.195233,  -0.018594, 0},
-        {-0.928477, 0.000000,  0, -0.371391, 0.000000,  0},
-        {-0.920002, -0.036079, 0, -0.389648, -0.021647, 0},
-        {-0.884112, -0.160748, 0, -0.434019, -0.064299, 0},
-        {-0.880102, -0.117347, 0, -0.457653, -0.046939, 0},
-        {-0.930261, -0.310087, 0, -0.186052, -0.062017, 0},
-        {-0.976164, -0.092968, 0, -0.195233, -0.018594, 0},
-        {-0.931312, -0.310437, 0, -0.186262, -0.039913, 0},
-        {-0.924294, -0.088028, 0, -0.369718, -0.035211, 0},
-        {-0.853630, -0.081298, 0, -0.512178, -0.048779, 0},
-        {0.853630,  0.081298,  0, 0.512178,  0.048779,  0},
-        {0.924294,  0.088028,  0, 0.369718,  0.035211,  0},
-        {-0.853630, 0.081298,  0, -0.512178, 0.048779,  0},
-        {0.853630,  -0.081298, 0, 0.512178,  -0.048779, 0},
-        {0.924294,  -0.088028, 0, 0.369718,  -0.035211, 0}
+{-0.937749,-0.347314,0,0.000000,0.000000,0},
+{1.000000,0.000000,0,0.000000,0.000000,0},
+{0.000000,0.000000,0,1.000000,0.000000,0},
+{0.000000,0.000000,0,0.000000,1.000000,0},
+{-0.937749,0.347314,0,0.000000,0.000000,0},
+{-1.000000,0.000000,0,0.000000,0.000000,0},
+{0.000000,0.000000,0,-1.000000,0.000000,0},
+{0.000000,0.000000,0,0.000000,-1.000000,0},
+{-0.920831,0.341049,0,-0.184166,0.042875,0},
+{0.980581,0.000000,0,0.196116,0.000000,0},
+{0.976164,0.092968,0,0.195233,0.018594,0},
+{0.976164,-0.092968,0,0.195233,-0.018594,0},
+{0.982846,0.026635,0,0.182186,0.010654,0},
+{0.983313,0.033791,0,0.178416,0.011006,0},
+{-0.980581,0.000000,0,-0.196116,0.000000,0},
+{-0.942434,-0.177818,0,-0.280952,-0.035564,0},
+{-0.920831,-0.341049,0,-0.184166,-0.042875,0},
+{-0.939588,0.229568,0,-0.251069,0.037920,0},
+{-0.929818,0.247341,0,-0.269327,0.041529,0},
+{-0.945071,0.207015,0,-0.250444,0.035553,0},
+{0.730320,-0.429600,0,0.524112,-0.085920,0},
+{0.730320,0.429600,0,0.524112,0.085920,0},
+{0.983313,-0.033791,0,0.178416,-0.011006,0},
+{0.982846,-0.026635,0,0.182186,-0.010654,0},
+{-0.919538,-0.340570,0,-0.183908,-0.068114,0},
+{-0.929818,-0.247341,0,-0.269327,-0.041529,0},
+{-0.945071,-0.207015,0,-0.250444,-0.035553,0},
+{-0.924294,0.088028,0,-0.369718,0.035211,0},
+{-0.942434,0.177818,0,-0.280952,0.035564,0},
+{-0.976164,0.092968,0,-0.195233,0.018594,0},
+{-0.942675,0.223627,0,-0.244964,0.036715,0},
+{-0.919538,0.340570,0,-0.183908,0.068114,0},
+{-0.942675,-0.223627,0,-0.244964,-0.036715,0},
+{-0.939588,-0.229568,0,-0.251069,-0.037920,0},
+{-0.976164,-0.092968,0,-0.195233,-0.018594,0},
+{-0.924294,-0.088028,0,-0.369718,-0.035211,0},
+{0.924294,0.088028,0,0.369718,0.035211,0},
+{0.924294,-0.088028,0,0.369718,-0.035211,0},
 
 
 };
 
 double hx[HX_SIZE][1] = {
-        {0.284605},
-        {0.200000},
-        {1.200000},
-        {0.400000},
-        {1.300000},
-        {0.284605},
-        {0.200000},
-        {1.200000},
-        {0.400000},
-        {1.300000},
-        {1.382619},
-        {0.326318},
-        {1.382619},
-        {0.238610},
-        {0.242646},
-        {0.344196},
-        {0.259475},
-        {0.238610},
-        {0.368112},
-        {0.558241},
-        {0.215728},
-        {0.259475},
-        {0.284660},
-        {0.215728},
-        {0.315347},
-        {0.285318},
-        {0.285211},
-        {0.334439},
-        {0.285318},
-        {0.315347},
-        {0.326846},
-        {0.301356},
-        {0.259973},
-        {0.558241},
-        {0.753153},
-        {0.753153},
-        {0.301356},
-        {0.326318},
-        {0.259973},
-        {0.284660},
-        {0.368112},
-        {0.334439},
-        {0.344196},
-        {0.242646},
-        {0.326846},
-        {0.285211},
-        {0.348769},
-        {0.421937},
-        {0.364436},
-        {0.348769},
-        {0.421937},
-        {0.364436},
-
+{0.114896},
+{0.119671},
+{0.199735},
+{1.300000},
+{0.114896},
+{0.119671},
+{0.199735},
+{1.300000},
+{0.164176},
+{0.136959},
+{0.197136},
+{0.197136},
+{0.157410},
+{0.160876},
+{0.136959},
+{0.160740},
+{0.164176},
+{0.156719},
+{0.165424},
+{0.152473},
+{0.496346},
+{0.496346},
+{0.160876},
+{0.157410},
+{0.184185},
+{0.165424},
+{0.152473},
+{0.185233},
+{0.160740},
+{0.137058},
+{0.153904},
+{0.184185},
+{0.153904},
+{0.156719},
+{0.137058},
+{0.185233},
+{0.242119},
+{0.242119},
 };
 
 
@@ -248,6 +218,7 @@ double add_left = 0;
 double add_right = 0;
 
 double C[HX_SIZE][1];
+struct state sps;
 
 int32_t getOneDecimalPlace(float num)
 {
@@ -360,75 +331,72 @@ struct state eval_state(struct state state_x, struct command U) {
 
 }
 
-struct command controller_safety(struct state x, struct controller_storage *cs) {
 
-    struct command U;
+struct command controller_safety(struct state sp, struct state x, struct controller_storage* cs){
 
-  
+	struct command U;
 
-    cs->int_travel += x.travel;
-    cs->int_pitch += x.pitch;
-    cs->int_elevation += x.elevation;
+	cs->int_travel +=  x.travel;
+	cs->int_pitch +=  x.pitch;
+	cs->int_elevation +=  x.elevation;
 
-    U.u1 = + -6.5 * x.elevation - .701 * x.pitch - 45.7161 * PERIOD * x.d_elevation -
-           3.051 * PERIOD * x.d_pitch; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
-    U.u2 = + -6.5 * x.elevation + .5701 * x.pitch - 45.7529 * PERIOD * x.d_elevation +
-           5.970 * PERIOD * x.d_pitch; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
+	U.u1 = -6.5 * (x.elevation-sp.elevation) - .701 * x.pitch  - 45.7161 * PERIOD * x.d_elevation -3.051 * PERIOD * x.d_pitch ; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
+	U.u2 = -6.5 * (x.elevation-sp.elevation) + .5701 * x.pitch - 45.7529 * PERIOD * x.d_elevation +5.970 * PERIOD*  x.d_pitch; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
+	cs->elevation2 = cs->elevation1;
+	cs->elevation1 = x.elevation;
 
+	cs->pitch2 = cs->pitch1;
+	cs->pitch1 = x.pitch;
 
-    cs->elevation2 = cs->elevation1;
-    cs->elevation1 = x.elevation;
-
-    cs->pitch2 = cs->pitch1;
-    cs->pitch1 = x.pitch;
-
-    cs->travel2 = cs->travel1;
-    cs->travel1 = x.travel;
+	cs->travel2 = cs->travel1;
+	cs->travel1 = x.travel;	
 
 
-    U.u1 = voltage_max_min(U.u1);
-    U.u2 = voltage_max_min(U.u2);
-
-
-
-    return U;
+	U.u1 = voltage_max_min(U.u1);
+	U.u2 = voltage_max_min(U.u2);
+	return U;
 }
 
-struct command controller_complex(struct state x, struct controller_storage *cs) {
-    struct command U;
-  
+struct command controller_complex(struct state sp, struct state x, struct controller_storage* cs){
+	struct command U;
+	//printf("\n:info int_elevation: %lf elevation_conv: %lf int_pitch:%lf, pitch_conv:%lf\n", int_elevation, elevation_conv, int_pitch, pitch_conv);
 
-    cs->int_travel += x.travel;
-    cs->int_pitch += x.pitch;
-    cs->int_elevation += x.elevation;
+	cs->int_travel +=  x.travel;
+	cs->int_pitch +=  x.pitch;
+	cs->int_elevation +=  x.elevation;
 
+	double trav = 30.0 * (x.travel - sp.travel)/100.0;
+	double d_trav = PERIOD*45*(x.d_travel )/10.0; 
+	printf("controller d %lf\n",  trav) ; //30*(x.travel-spc.travel)/100.0 ) ; 	
+	printf("controller   %lf\n",  d_trav) ; //2*(x.d_travel)/10.0 ) ; 
 
-    //  U.u1 = 1+ -6.5 * x.elevation  - 3.01 * (x.pitch + 0.08)  -25.7161 * x.d_elevation ;//-3.051 * x.d_pitch; //-.0333*cs->int_elevation -0.001*cs->int_pitch;
-    //  U.u2  = 1 + -6.5 * x.elevation  + 5.5701 * (x.pitch + 0.08) -25.7529 * x.d_elevation; // +5.970 * x.d_pitch; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
+	//This one is working!
+	//right voltage
+//        U.u1 =    -6.5 * (x.elevation - sp.elevation)  - .701 * x.pitch + trav  - 45.7161 * PERIOD * x.d_elevation -3.051 * PERIOD * x.d_pitch +d_trav; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
+        //left voltage
+//	U.u2  =   -6.5 * (x.elevation - sp.elevation)  + .5701 * x.pitch -trav - 45.7529 * PERIOD * x.d_elevation +5.970 * PERIOD*  x.d_pitch -d_trav; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
-    U.u1 = -.5 * x.elevation - .701 * (x.pitch - 0.2) - 45.7161 * PERIOD * x.d_elevation - 3.051 * PERIOD * x.d_pitch +
-           0.2 * x.travel; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
-    U.u2 = -.5 * x.elevation + .5701 * (x.pitch - 0.2) - 45.7529 * PERIOD * x.d_elevation + 5.970 * PERIOD * x.d_pitch -
-           0.2 * x.travel; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
+    U.u1 =    -6.5 * (x.elevation - sp.elevation)  - .9701 * x.pitch + trav  - 55.7161 * PERIOD * x.d_elevation -7.051 * PERIOD * x.d_pitch +d_trav; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
+        //left voltage
+	U.u2  =   -6.5 * (x.elevation - sp.elevation)  + .97701 * x.pitch -trav - 55.7529 * PERIOD * x.d_elevation +10.970 * PERIOD*  x.d_pitch -d_trav; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
-    cs->elevation2 = cs->elevation1;
-    cs->elevation1 = x.elevation;
+	cs->elevation2 = cs->elevation1;
+	cs->elevation1 = x.elevation;
 
-    cs->pitch2 = cs->pitch1;
-    cs->pitch1 = x.pitch;
+	cs->pitch2 = cs->pitch1;
+	cs->pitch1 = x.pitch;
 
-    cs->travel2 = cs->travel1;
-    cs->travel1 = x.travel;
+	cs->travel2 = cs->travel1;
+	cs->travel1 = x.travel;	
 
-    U.u1 += add_right;
-    U.u2 += add_left;
+	U.u1 += add_right;
+	U.u2 += add_left;
 
+	U.u1 = voltage_max_min(U.u1);
+	U.u2 = voltage_max_min(U.u2);
 
-    U.u1 = voltage_max_min(U.u1);
-    U.u2 = voltage_max_min(U.u2);
-
-    return U;
+	return U;
 }
 
 
@@ -503,7 +471,7 @@ struct state simulate_with_controller(struct state init_state, double time) {
     int k = 0;
 
     for (k = 0; k < steps; k++) {
-        struct command U = controller_safety(state_x, &cs);
+        struct command U = controller_safety(sps, state_x, &cs);
         state_x = eval_state(state_x, U);
         if (check_safety(state_x) == 0) {
 
@@ -669,6 +637,9 @@ void MainTask(void *pvParameters)
 
     while(1){
 
+
+	struct state spc; //set point for safety and complex controllers
+
         for (step = 0; step < 15000; step++) {
 
         //        unsigned short int tmparray[4];
@@ -713,39 +684,78 @@ void MainTask(void *pvParameters)
             storage.travel1 = cs.travel;
 
 
-            if (step < 50) {
-                vol_right = 0;
-                vol_left = 0;
-            } 
-            else {
-                
-                struct command U_safety = controller_safety(cs, &storage_safety);
-                struct command U_complex = controller_complex(cs, &storage_complex);
+		if (step < 30 ){
+			vol_right = 0;
+			vol_left = 0;
+		}
+		else 
+		{
+		/*
+			The logic is that after every restart the safety controller is active for a set amount of time. After that if the
+			complex controller's command is safe, it can be used again.
+		*/
 
-                if (decide(cs, U_complex, 0.2) == 1 && (remaining_safety_cycles <= 0)) {
+				if (step > 1800)
+				{
+					spc.travel = 3.1415/2;
+				}
+				else if( step > 1600){
+					spc.travel = 3.1415/4;
+				}
+				else if (step > 1400){
+					spc.travel = 0;
+				}
+				else if (step > 900){
+					spc.travel = 3.14;
+				}
+				else if (step > 400){
+					spc.elevation = 0.4;
+					spc.travel = 3.14/2;
+				}
+				else if (step > 300){
+					sps.elevation = 0.4;
+				}
+				else if (step > 200){
+					sps.elevation = 0.3;
+				}
+				else if (step > 150){
+					sps.elevation = 0.2;
+				}
+				else if (step > 100){
+					sps.elevation = 0.1;
+				}
+				else if (step >50){
+					sps.elevation = 0;
+				}
+			
+				struct command U_safety = controller_safety(sps, cs, &storage_safety);
+				struct command U_complex = controller_complex(spc, cs,  &storage_complex);		
+				printf("remaining_cycle %d\n", remaining_safety_cycles);
 
-                    vol_right = U_complex.u1;
-                    vol_left = U_complex.u2;
-                } else {
-                    vol_right = U_safety.u1;
-                    vol_left = U_safety.u2;
-                    remaining_safety_cycles -= 1;
-                }
-            }
+				if (step < 400){
+						vol_right = U_safety.u1;
+									vol_left = U_safety.u2;
+				}
+				else if(decide(cs, U_complex, 0.2) == 1 && (remaining_safety_cycles <= 0 )  ) {
+					printf("complex controller\n");
+					vol_right = U_complex.u1;
+					vol_left = U_complex.u2;
+				}
+				else {
+					printf("safety controller\n");
+					vol_right = U_safety.u1;
+					vol_left = U_safety.u2;
+					remaining_safety_cycles -= 1;
+				}
+			}
+			
+		if(step % 200 == 0){
 
-        //
-        //        if (step % 200 == 0) {
-        //          if (DEBUG == 1){
-        //              printf("restart\n");
-        //          }
-        //            usleep(RESTART_TIME * 1000000.0);
-        //            remaining_safety_cycles = 60;
-        //
-        //        }
+			printf("restart\n");
+			usleep(RESTART_TIME *1000000.0);
+			remaining_safety_cycles = 60;
 
-            //      vol_right = 0;
-            //      vol_left = 0;
-            //      printf ("elev -1/3* pitch : %lf elev + 1.0/3.0*pitch: %lf\n", cs.elevation-0.3333*cs.pitch, cs.elevation + 0.3333*cs.pitch);
+		}			
 
             if (vol_right > MAX_VOLTAGE)
                 vol_right = MAX_VOLTAGE;
