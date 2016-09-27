@@ -75,6 +75,10 @@ static void UART_ReceiveDataPolling(UART_Type *base, uint8_t *rxBuff, uint32_t r
 
 #define MAX_VOLTAGE		3
 
+//unsigned char readData[2]= {0xCC,0xCC};
+// /unsigned char writeData[2]={0xDD,0xBB};
+
+
     // Setup UART init structure.
 uart_init_config_t initConfig = {
     .baudRate   = 115200u,
@@ -368,8 +372,8 @@ struct command controller_complex(struct state sp, struct state x, struct contro
 
 	double trav = 30.0 * (x.travel - sp.travel)/100.0;
 	double d_trav = PERIOD*45*(x.d_travel )/10.0; 
-	printf("controller d %lf\n",  trav) ; //30*(x.travel-spc.travel)/100.0 ) ; 	
-	printf("controller   %lf\n",  d_trav) ; //2*(x.d_travel)/10.0 ) ; 
+	//printf("controller d %lf\n",  trav) ; //30*(x.travel-spc.travel)/100.0 ) ; 	
+	//printf("controller   %lf\n",  d_trav) ; //2*(x.d_travel)/10.0 ) ; 
 
 	//This one is working!
 	//right voltage
@@ -602,7 +606,7 @@ void MainTask(void *pvParameters)
 
     int sensor_readings[3];
 
-    read_from_serial(sensor_readings);
+    
 
     int base_travel = sensor_readings[0];
     int base_pitch = sensor_readings[1];
@@ -629,11 +633,15 @@ void MainTask(void *pvParameters)
 
     double voltages[2];
 
-	byteCount = sizeof(bufferData1);
-    UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, bufferData1, byteCount);
+	//byteCount = sizeof(bufferData1);
+    //UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, bufferData1, byteCount);
    // printf("Main Task has been triggerred..... \r\n");
 
-    vTaskDelay(100);
+    //vTaskDelay(100);
+    // send read request
+    
+    //UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, readData, 1);
+    //read_from_serial(sensor_readings);
 
     while(1){
 
@@ -650,9 +658,11 @@ void MainTask(void *pvParameters)
             
             voltages[0] = vol_left;
             voltages[1] = vol_right;
+            //UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, writeData, 1);
             write_to_serial(voltages);
 
             /* .. Reading the Encoder values from the helicopter......*/
+            //UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, readData, 1);
             read_from_serial(sensor_readings);
         //        err = ioctl(File_Descriptor, Q8_ENC, sensor_readings);
         //        if (err != 0) {
@@ -660,9 +670,9 @@ void MainTask(void *pvParameters)
         //            return -1;
         //        }
 
-            int travel = sensor_readings[0] - base_travel;
-            int pitch = sensor_readings[1] - base_pitch;
-            int elevation = -(sensor_readings[2] - base_elevation) - 300;
+            int travel = sensor_readings[0];// - base_travel;
+            int pitch = sensor_readings[1];// - base_pitch;
+            int elevation = -(sensor_readings[2]) - 300;
 
             struct state cs;
 
@@ -719,7 +729,7 @@ void MainTask(void *pvParameters)
 					sps.elevation = 0.3;
 				}
 				else if (step > 150){
-					sps.elevation = 0.2;
+					sps.elevation = 0.2;    
 				}
 				else if (step > 100){
 					sps.elevation = 0.1;
@@ -727,35 +737,38 @@ void MainTask(void *pvParameters)
 				else if (step >50){
 					sps.elevation = 0;
 				}
+					// spc.travel = 0;
+					// sps.elevation = 0.4;
+     //                spc.elevation = 0.4;
 			
 				struct command U_safety = controller_safety(sps, cs, &storage_safety);
 				struct command U_complex = controller_complex(spc, cs,  &storage_complex);		
-				printf("remaining_cycle %d\n", remaining_safety_cycles);
+				//printf("remaining_cycle %d\n", remaining_safety_cycles);
 
 				if (step < 400){
 						vol_right = U_safety.u1;
 									vol_left = U_safety.u2;
 				}
 				else if(decide(cs, U_complex, 0.2) == 1 && (remaining_safety_cycles <= 0 )  ) {
-					printf("complex controller\n");
+					//printf("complex controller\n");
 					vol_right = U_complex.u1;
 					vol_left = U_complex.u2;
 				}
 				else {
-					printf("safety controller\n");
+					//printf("safety controller\n");
 					vol_right = U_safety.u1;
 					vol_left = U_safety.u2;
 					remaining_safety_cycles -= 1;
 				}
 			}
 			
-		if(step % 200 == 0){
+		/*if(step % 200 == 0){
 
 			printf("restart\n");
-			usleep(RESTART_TIME *1000000.0);
+			//usleep(RESTART_TIME *1000000.0);
 			remaining_safety_cycles = 60;
 
-		}			
+		}*/			
 
             if (vol_right > MAX_VOLTAGE)
                 vol_right = MAX_VOLTAGE;
@@ -771,7 +784,7 @@ void MainTask(void *pvParameters)
             vol_right = voltage_max_min(vol_right);
             vol_left = voltage_max_min(vol_left);
             
-            vTaskDelay(100);
+            //vTaskDelay(1);
         }
     }    
 
