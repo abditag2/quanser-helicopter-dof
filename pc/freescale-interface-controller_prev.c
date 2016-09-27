@@ -341,17 +341,16 @@
 			sensor_readings_calibrated[1] = sensor_reading[1] - base_pitch;
 			sensor_readings_calibrated[2] = sensor_reading[2] - base_elevation;
 			
-			printf("%" PRId64 " \t %d, %d, %d\n", delta_us, sensor_readings_calibrated[0], sensor_readings_calibrated[1], sensor_readings_calibrated[2]);	
-
-			
 			send_serial(fd, sensor_readings_calibrated);
+			//fflush(fd);
+			//fflush(stdout);
 			usleep(50000);
 
 		// write
 			double commands[2];
 			read_8_bytes(fd, commands);
-
-			printf("val1: %lf, val2: %lf\n", commands[0], commands[1] ) ;
+			printf("%d, %d, %d\n", sensor_readings_calibrated[0], sensor_readings_calibrated[1], sensor_readings_calibrated[2]);	
+			printf("%" PRId64 " \t val1: %lf, val2: %lf\n", delta_us, commands[0], commands[1] ) ;
 			
 			vol_left = commands[0];
 			vol_right = commands[1];
