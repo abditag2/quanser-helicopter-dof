@@ -669,6 +669,7 @@ void MainTask(void *pvParameters)
             voltages[1] = vol_right;
            
             //sleep(50)
+            vTaskDelayUntil( &xLastWakeTime, xFrequency ); 
             
             write_to_serial(voltages);
              
@@ -677,7 +678,8 @@ void MainTask(void *pvParameters)
             /* .. Reading the Encoder values from the helicopter......*/
             //UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, readData, 1);
             read_from_serial(sensor_readings);
-            //vTaskDelayUntil( &xLastWakeTime, xFrequency ); 
+            //vTaskDelay(50);
+            
 
         //    vTaskDelay(xDelay);
         //        err = ioctl(File_Descriptor, Q8_ENC, sensor_readings);
@@ -710,12 +712,12 @@ void MainTask(void *pvParameters)
             storage.travel1 = cs.travel;
 
 
-        if (step < 30 ){
-            vol_right = 0;
-            vol_left = 0;
-        }
-        else 
-        {
+        // if (step < 30 ){
+        //     vol_right = 0;
+        //     vol_left = 0;
+        // }
+        // else 
+        // {
         /*
             The logic is that after every restart the safety controller is active for a set amount of time. After that if the
             complex controller's command is safe, it can be used again.
@@ -777,7 +779,7 @@ void MainTask(void *pvParameters)
                     vol_left = U_safety.u2;
                     remaining_safety_cycles -= 1;
                 }
-            }
+            // }
             
         /*if(step % 200 == 0){
 
