@@ -84,6 +84,7 @@
 
 
 	void read_8_bytes(int fd, double* commands){
+		// printf("READ\n");
 		unsigned char buf8[SERIAL_DATA_SIZE];
 		unsigned char buf;
 
@@ -164,6 +165,8 @@
 	double vol_left = 0;
 
 	void send_serial(int fd, int sensor_readings[]){
+		
+		
 
 		unsigned char Txbuffer[13];
 		int i;
@@ -175,18 +178,19 @@
 			Txbuffer[4*i + 2]          = (unsigned char) (sensor_readings[i] >> 16 & 0xff); /* third byte */
 			Txbuffer[4*i + 3]          = (unsigned char) (sensor_readings[i] >> 24 & 0xff); /* fourth byte */
 		}
-		unsigned char start = 0xAA;
+		
+//		unsigned char start = 0xAA;
 		Txbuffer[12] = 0xFF;
 
 		
 		while (1){
 	//		printf("SEND: in the while loop.\n");
-			write(fd, &start, 1);
+	//		write(fd, &start, 1);
 			
 			int n = read (fd, &buf, 1);
 			if (n == 1) {
 	//			printf("SEND: char is: %x\n", buf);
-				if (buf == 0xBB){
+				if (buf == 0xAA){
 	//				printf("SEND: I recieved BB\n");
 					write(fd, Txbuffer, 13);
 	//				usleep (2000);             // sleep enough to transmit the 7 plus
@@ -247,13 +251,7 @@
 
 	int main()
 	{
-		
-		//do stuff
-		
-
-	//serial port init
-
-
+		//serial port init
 
 		char *portname = "/dev/ttyUSB1";
 		int fd = open (portname, O_RDWR | O_NOCTTY | O_SYNC);
@@ -268,8 +266,7 @@
 
 	// quanser init
 
-
-		int File_Descriptor, i, j; /**/
+		int File_Descriptor; 
 		int Return_Value ; /*To catch the return value .......*/
 		char Buffer[Q8_EXAMPLE2_MAXLEN] ;
 		int tmp;
@@ -326,14 +323,15 @@
 				perror("Epic Fail first enc read\n");
 				return -1;
 			}
-		
+			//close(File_Descriptor);
+
 		//	sensor_reading[0] = 1000;
 		//	sensor_reading[1] = 24000;
 
-			last = current_time;
-			gettimeofday(&current_time, NULL);
+			//last = current_time;
+
 			
-			uint64_t delta_us = (current_time.tv_sec - last.tv_sec) * 1000000 + (current_time.tv_usec - last.tv_usec);
+			gettimeofday(&last, NULL);			
 
 			int sensor_readings_calibrated[3];
 			
@@ -342,16 +340,23 @@
 			sensor_readings_calibrated[2] = sensor_reading[2] - base_elevation;
 			
 			send_serial(fd, sensor_readings_calibrated);
-			//fflush(fd);
-			//fflush(stdout);
-			usleep(50000);
 
+			usleep(1000);			
+			usleep(50000);				
 		// write
 			double commands[2];
 			read_8_bytes(fd, commands);
-			printf("%d, %d, %d\n", sensor_readings_calibrated[0], sensor_readings_calibrated[1], sensor_readings_calibrated[2]);	
-			printf("%" PRId64 " \t val1: %lf, val2: %lf\n", delta_us, commands[0], commands[1] ) ;
+
 			
+			gettimeofday(&current_time, NULL);
+						
+			uint64_t delta_us = (current_time.tv_sec - last.tv_sec) * 1000000 + (current_time.tv_usec - last.tv_usec);
+			
+			printf("\n \t\t\t%d, %d, %d\n", sensor_readings_calibrated[0], sensor_readings_calibrated[1], sensor_readings_calibrated[2]);	
+			printf("%" PRId64 " \t val1: %lf, val2: %lf\n", delta_us, commands[0], commands[1] ) ;
+
+
+
 			vol_left = commands[0];
 			vol_right = commands[1];
 
@@ -367,6 +372,11 @@
 					vol_left = -MAX_VOLTAGE;
 
 			unsigned short int tmparray[4];
+			
+			
+			//vol_right = 0;
+			//vol_left = 0;
+			
 			tmparray[0] = Q8_dacVTO((vol_right), 1, 10);
 			tmparray[1] = Q8_dacVTO((vol_left), 1, 10);
 			ioctl(File_Descriptor, Q8_WR_DAC, tmparray);
