@@ -28,27 +28,26 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-///////////////////////////////////////////////////////////////////////////////
-//  Includes
-///////////////////////////////////////////////////////////////////////////////
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "board.h"
-#include "rdc_semaphore.h"
 #include "debug_console_imx.h"
+#include "gpio_ctrl.h"
+#include "hw_timer.h"
+#include "rpmsg/rpmsg_rtos.h"
+#include "semphr.h"
+#include "string.h"
+#include "mu_imx.h"
+
 #include "gpio_pins.h"
 #include "gpio_imx.h"
 #include "i2c_xfer.h"
 #include "fxas21002.h"
 #include "fxos8700.h"
 #include "mpl3115.h"
-#include "uart_imx.h" 
+#include "uart_imx.h"
 
 
-//#include "gpio_wrapper.h" // Added By Rohan Tabish
 
 
 static void UART_SendDataPolling(UART_Type *base, const uint8_t *txBuff, uint32_t txSize);
@@ -65,15 +64,15 @@ static void UART_ReceiveDataPolling(UART_Type *base, uint8_t *rxBuff, uint32_t r
 // Quanser Code Starts Here
 ////////////////////////////////////////////////////////////////////////////////
 
-#define DEBUG 			0
-#define RECORD 			0
-#define HX_SIZE 		52
+#define DEBUG           0
+#define RECORD          0
+#define HX_SIZE         52
 
-#define SIM_STEP      	0.01
-#define PERIOD        	0.05
-#define RESTART_TIME  	0.3
+#define SIM_STEP        0.02
+#define PERIOD          0.05
+#define RESTART_TIME    0.
 
-#define MAX_VOLTAGE		3
+#define MAX_VOLTAGE     3
 
 //unsigned char readData[2]= {0xCC,0xCC};
 // /unsigned char writeData[2]={0xDD,0xBB};
@@ -338,69 +337,69 @@ struct state eval_state(struct state state_x, struct command U) {
 
 struct command controller_safety(struct state sp, struct state x, struct controller_storage* cs){
 
-	struct command U;
+    struct command U;
 
-	cs->int_travel +=  x.travel;
-	cs->int_pitch +=  x.pitch;
-	cs->int_elevation +=  x.elevation;
+    cs->int_travel +=  x.travel;
+    cs->int_pitch +=  x.pitch;
+    cs->int_elevation +=  x.elevation;
 
-	U.u1 = -6.5 * (x.elevation-sp.elevation) - .701 * x.pitch  - 45.7161 * PERIOD * x.d_elevation -3.051 * PERIOD * x.d_pitch ; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
-	U.u2 = -6.5 * (x.elevation-sp.elevation) + .5701 * x.pitch - 45.7529 * PERIOD * x.d_elevation +5.970 * PERIOD*  x.d_pitch; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
+    U.u1 = -6.5 * (x.elevation-sp.elevation) - .701 * x.pitch  - 45.7161 * PERIOD * x.d_elevation -3.051 * PERIOD * x.d_pitch ; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
+    U.u2 = -6.5 * (x.elevation-sp.elevation) + .5701 * x.pitch - 45.7529 * PERIOD * x.d_elevation +5.970 * PERIOD*  x.d_pitch; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
-	cs->elevation2 = cs->elevation1;
-	cs->elevation1 = x.elevation;
+    cs->elevation2 = cs->elevation1;
+    cs->elevation1 = x.elevation;
 
-	cs->pitch2 = cs->pitch1;
-	cs->pitch1 = x.pitch;
+    cs->pitch2 = cs->pitch1;
+    cs->pitch1 = x.pitch;
 
-	cs->travel2 = cs->travel1;
-	cs->travel1 = x.travel;	
+    cs->travel2 = cs->travel1;
+    cs->travel1 = x.travel; 
 
 
-	U.u1 = voltage_max_min(U.u1);
-	U.u2 = voltage_max_min(U.u2);
-	return U;
+    U.u1 = voltage_max_min(U.u1);
+    U.u2 = voltage_max_min(U.u2);
+    return U;
 }
 
 struct command controller_complex(struct state sp, struct state x, struct controller_storage* cs){
-	struct command U;
-	//printf("\n:info int_elevation: %lf elevation_conv: %lf int_pitch:%lf, pitch_conv:%lf\n", int_elevation, elevation_conv, int_pitch, pitch_conv);
+    struct command U;
+    //printf("\n:info int_elevation: %lf elevation_conv: %lf int_pitch:%lf, pitch_conv:%lf\n", int_elevation, elevation_conv, int_pitch, pitch_conv);
 
-	cs->int_travel +=  x.travel;
-	cs->int_pitch +=  x.pitch;
-	cs->int_elevation +=  x.elevation;
+    cs->int_travel +=  x.travel;
+    cs->int_pitch +=  x.pitch;
+    cs->int_elevation +=  x.elevation;
 
-	double trav = 30.0 * (x.travel - sp.travel)/100.0;
-	double d_trav = PERIOD*45*(x.d_travel )/10.0; 
-	//printf("controller d %lf\n",  trav) ; //30*(x.travel-spc.travel)/100.0 ) ; 	
-	//printf("controller   %lf\n",  d_trav) ; //2*(x.d_travel)/10.0 ) ; 
+    double trav = 30.0 * (x.travel - sp.travel)/100.0;
+    double d_trav = PERIOD*45*(x.d_travel )/10.0; 
+    //printf("controller d %lf\n",  trav) ; //30*(x.travel-spc.travel)/100.0 ) ;    
+    //printf("controller   %lf\n",  d_trav) ; //2*(x.d_travel)/10.0 ) ; 
 
-	//This one is working!
-	//right voltage
+    //This one is working!
+    //right voltage
 //        U.u1 =    -6.5 * (x.elevation - sp.elevation)  - .701 * x.pitch + trav  - 45.7161 * PERIOD * x.d_elevation -3.051 * PERIOD * x.d_pitch +d_trav; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
         //left voltage
-//	U.u2  =   -6.5 * (x.elevation - sp.elevation)  + .5701 * x.pitch -trav - 45.7529 * PERIOD * x.d_elevation +5.970 * PERIOD*  x.d_pitch -d_trav; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
+//  U.u2  =   -6.5 * (x.elevation - sp.elevation)  + .5701 * x.pitch -trav - 45.7529 * PERIOD * x.d_elevation +5.970 * PERIOD*  x.d_pitch -d_trav; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
     U.u1 =    -6.5 * (x.elevation - sp.elevation)  - .9701 * x.pitch + trav  - 55.7161 * PERIOD * x.d_elevation -7.051 * PERIOD * x.d_pitch +d_trav; //-0.0333*cs->int_elevation -0.001*cs->int_pitch;
         //left voltage
-	U.u2  =   -6.5 * (x.elevation - sp.elevation)  + .97701 * x.pitch -trav - 55.7529 * PERIOD * x.d_elevation +10.970 * PERIOD*  x.d_pitch -d_trav; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
+    U.u2  =   -6.5 * (x.elevation - sp.elevation)  + .97701 * x.pitch -trav - 55.7529 * PERIOD * x.d_elevation +10.970 * PERIOD*  x.d_pitch -d_trav; //-0.03*cs->int_elevation +0.001*cs->int_pitch;
 
-	cs->elevation2 = cs->elevation1;
-	cs->elevation1 = x.elevation;
+    cs->elevation2 = cs->elevation1;
+    cs->elevation1 = x.elevation;
 
-	cs->pitch2 = cs->pitch1;
-	cs->pitch1 = x.pitch;
+    cs->pitch2 = cs->pitch1;
+    cs->pitch1 = x.pitch;
 
-	cs->travel2 = cs->travel1;
-	cs->travel1 = x.travel;	
+    cs->travel2 = cs->travel1;
+    cs->travel1 = x.travel; 
 
-	U.u1 += add_right;
-	U.u2 += add_left;
+    U.u1 += add_right;
+    U.u2 += add_left;
 
-	U.u1 = voltage_max_min(U.u1);
-	U.u2 = voltage_max_min(U.u2);
+    U.u1 = voltage_max_min(U.u1);
+    U.u2 = voltage_max_min(U.u2);
 
-	return U;
+    return U;
 }
 
 
@@ -461,9 +460,9 @@ struct state simulate_fixed_control(struct state init_state, struct command U, d
 
 struct state simulate_with_controller(struct state init_state, double time) {
 
-	struct state state_x;
+    struct state state_x;
 
-	state_x = init_state;
+    state_x = init_state;
 
     int steps = time / SIM_STEP;
 
@@ -497,9 +496,11 @@ struct state simulate_with_controller(struct state init_state, double time) {
 int decide(struct state current_state, struct command U, double time) {
     //struct state x2 = simulate_fixed_control(current_state, U, time);
     struct state x2 = simulate_fixed_control(current_state, U, RESTART_TIME);
-	// struct state x10;
-    struct state x10 = simulate_with_controller(x2, 1);
+    // struct state x10;
+    if (x2.safe == 0)
+        return 0;
 
+    struct state x10 = simulate_with_controller(x2, 1);
 
     if (x2.safe == 1 && x10.safe == 1)
         return 1;
@@ -552,30 +553,30 @@ void read_from_serial(int* sensor_readings){
     double tmpSend[2];
 
 
-    while (1){
+    //while (1){
 
-        UART_ReceiveDataPolling(BOARD_DEBUG_UART_BASEADDR, &rxChar, 1);
+        
 
 
-        if(rxChar == 0xAA){
-        	rxChar = 0xBB;
+        //if(rxChar == 0xAA){
+        rxChar = 0xAA;
 
-        	UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, &rxChar, 1);
-            UART_ReceiveDataPolling(BOARD_DEBUG_UART_BASEADDR, rxChar1, 13);
+        UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, &rxChar, 1);
+        UART_ReceiveDataPolling(BOARD_DEBUG_UART_BASEADDR, rxChar1, 13);
 
-            sensor_readings[0] = *(unsigned int *)&rxChar1[0];
-            sensor_readings[1] = *(unsigned int *)&rxChar1[4];
-            sensor_readings[2] = *(unsigned int *)&rxChar1[8];
+        sensor_readings[0] = *(unsigned int *)&rxChar1[0];
+        sensor_readings[1] = *(unsigned int *)&rxChar1[4];
+        sensor_readings[2] = *(unsigned int *)&rxChar1[8];
 
-            tmpSend[0] = (double)sensor_readings[0];
-            tmpSend[1] = (double)sensor_readings[1];
+        tmpSend[0] = (double)sensor_readings[0];
+        tmpSend[1] = (double)sensor_readings[1];
 
 
             //write_to_serial(tmpSend);
 
-            break;
-        }
-   }
+        //break;
+        //}
+   //}
 
     return;
 }
@@ -592,6 +593,7 @@ void MainTask(void *pvParameters)
     int step = 0;
     double vol_step = 0.1;
     int byteCount;
+    //const TickType_t xDelay = 20 / portTICK_PERIOD_MS;
     //
     //    FILE *ofp;
     //    ofp = fopen("recorded_data.txt", "w");
@@ -606,7 +608,14 @@ void MainTask(void *pvParameters)
 
     int sensor_readings[3];
 
+    TickType_t xLastWakeTime;
+    const TickType_t xFrequency = 50;
+
+     // Initialise the xLastWakeTime variable with the current time.
+     xLastWakeTime = xTaskGetTickCount();
     
+
+
 
     int base_travel = sensor_readings[0];
     int base_pitch = sensor_readings[1];
@@ -633,7 +642,7 @@ void MainTask(void *pvParameters)
 
     double voltages[2];
 
-	//byteCount = sizeof(bufferData1);
+    //byteCount = sizeof(bufferData1);
     //UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, bufferData1, byteCount);
    // printf("Main Task has been triggerred..... \r\n");
 
@@ -646,7 +655,7 @@ void MainTask(void *pvParameters)
     while(1){
 
 
-	struct state spc; //set point for safety and complex controllers
+    struct state spc; //set point for safety and complex controllers
 
         for (step = 0; step < 15000; step++) {
 
@@ -658,12 +667,19 @@ void MainTask(void *pvParameters)
             
             voltages[0] = vol_left;
             voltages[1] = vol_right;
-            //UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, writeData, 1);
+           
+            //sleep(50)
+            
             write_to_serial(voltages);
-
+             
+            //vTaskDelay(xDelay);
+            //Hw_Timer_Delay(50);
             /* .. Reading the Encoder values from the helicopter......*/
             //UART_SendDataPolling(BOARD_DEBUG_UART_BASEADDR, readData, 1);
             read_from_serial(sensor_readings);
+            //vTaskDelayUntil( &xLastWakeTime, xFrequency ); 
+
+        //    vTaskDelay(xDelay);
         //        err = ioctl(File_Descriptor, Q8_ENC, sensor_readings);
         //        if (err != 0) {
         //            perror("Epic Fail first enc read\n");
@@ -694,91 +710,84 @@ void MainTask(void *pvParameters)
             storage.travel1 = cs.travel;
 
 
-		if (step < 30 ){
-			vol_right = 0;
-			vol_left = 0;
-		}
-		else 
-		{
-		/*
-			The logic is that after every restart the safety controller is active for a set amount of time. After that if the
-			complex controller's command is safe, it can be used again.
-		*/
+        if (step < 30 ){
+            vol_right = 0;
+            vol_left = 0;
+        }
+        else 
+        {
+        /*
+            The logic is that after every restart the safety controller is active for a set amount of time. After that if the
+            complex controller's command is safe, it can be used again.
+        */
 
-				if (step > 1800)
-				{
-					spc.travel = 3.1415/2;
-				}
-				else if( step > 1600){
-					spc.travel = 3.1415/4;
-				}
-				else if (step > 1400){
-					spc.travel = 0;
-				}
-				else if (step > 900){
-					spc.travel = 3.14;
-				}
-				else if (step > 400){
-					spc.elevation = 0.4;
-					spc.travel = 3.14/2;
-				}
-				else if (step > 300){
-					sps.elevation = 0.4;
-				}
-				else if (step > 200){
-					sps.elevation = 0.3;
-				}
-				else if (step > 150){
-					sps.elevation = 0.2;    
-				}
-				else if (step > 100){
-					sps.elevation = 0.1;
-				}
-				else if (step >50){
-					sps.elevation = 0;
-				}
-					// spc.travel = 0;
-					// sps.elevation = 0.4;
-     //                spc.elevation = 0.4;
-			
-				struct command U_safety = controller_safety(sps, cs, &storage_safety);
-				struct command U_complex = controller_complex(spc, cs,  &storage_complex);		
-				//printf("remaining_cycle %d\n", remaining_safety_cycles);
+          /*      if (step > 1800)
+                {
+                    spc.travel = 3.1415/2;
+                }
+                else if( step > 1600){
+                    spc.travel = 3.1415/4;
+                }
+                else if (step > 1400){
+                    spc.travel = 0;
+                }
+                else if (step > 900){
+                    spc.travel = 3.14;
+                }
+                else if (step > 400){
+                    spc.elevation = 0.4;
+                    spc.travel = 3.14/2;
+                }
+                else if (step > 300){
+                    sps.elevation = 0.4;
+                }*/
+                // else if (step > 200){
+                //  sps.elevation = 0.3;
+                // }
+                // else if (step > 150){
+                //  sps.elevation = 0.2;    
+                // }
+                // else if (step > 100){
+                //  sps.elevation = 0.1;
+                // }
+                // else if (step >50){
+                //  sps.elevation = 0;
+                // }
+                    spc.travel = 0;
+                    sps.elevation = 0.4;
+                    spc.elevation = 0.4;
+            
+                struct command U_safety = controller_safety(sps, cs, &storage_safety);
+                struct command U_complex = controller_complex(spc, cs,  &storage_complex);      
+                //printf("remaining_cycle %d\n", remaining_safety_cycles);
 
-				if (step < 400){
-						vol_right = U_safety.u1;
-									vol_left = U_safety.u2;
-				}
-				else if(decide(cs, U_complex, 0.2) == 1 && (remaining_safety_cycles <= 0 )  ) {
-					//printf("complex controller\n");
-					vol_right = U_complex.u1;
-					vol_left = U_complex.u2;
-				}
-				else {
-					//printf("safety controller\n");
-					vol_right = U_safety.u1;
-					vol_left = U_safety.u2;
-					remaining_safety_cycles -= 1;
-				}
-			}
-			
-		/*if(step % 200 == 0){
 
-			printf("restart\n");
-			//usleep(RESTART_TIME *1000000.0);
-			remaining_safety_cycles = 60;
+                if (step < 100){
+                        vol_right = U_safety.u1;
+                        vol_left = U_safety.u2;
+                }
+                else if(decide(cs, U_complex, 0.2) == 1 && (remaining_safety_cycles <= 0 )  ) {   
+                     //printf("complex controller\n");
+                     vol_right = U_complex.u1;
+                     vol_left = U_complex.u2;
+                }
+                else {
+                    //printf("safety controller\n");
+                    vol_right = U_safety.u1;
+                    vol_left = U_safety.u2;
+                    remaining_safety_cycles -= 1;
+                }
+            }
+            
+        /*if(step % 200 == 0){
 
-		}*/			
+            printf("restart\n");
+            //usleep(RESTART_TIME *1000000.0);
+            remaining_safety_cycles = 60;
 
-            if (vol_right > MAX_VOLTAGE)
-                vol_right = MAX_VOLTAGE;
-            else if (vol_right < -MAX_VOLTAGE)
-                vol_right = -MAX_VOLTAGE;
+        }*/         
 
-            if (vol_left > MAX_VOLTAGE)
-                vol_left = MAX_VOLTAGE;
-            else if (vol_left < -MAX_VOLTAGE)
-                vol_left = -MAX_VOLTAGE;
+
 
 
             vol_right = voltage_max_min(vol_right);
@@ -795,6 +804,7 @@ int main(void)
 {
     /* Initialize board specified hardware. */
     hardware_init();
+   // Hw_Timer_Init();
 
     // Get current module clock frequency.
     initConfig.clockRate  = get_uart_clock_freq(BOARD_DEBUG_UART_BASEADDR);
@@ -841,7 +851,3 @@ static void UART_ReceiveDataPolling(UART_Type *base, uint8_t *rxBuff, uint32_t r
             UART_ClearStatusFlag(base, uartStatusRxOverrun);
     }
 }
-
-/*******************************************************************************
- * EOF
- ******************************************************************************/
