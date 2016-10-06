@@ -64,7 +64,7 @@
 		return 0;
 	}
 
-	void set_blocking (int fd, int should_block)
+	void set_blocking (int fd, int should_block, int number_of_char)
 	{
 		struct termios tty;
 		memset (&tty, 0, sizeof tty);
@@ -74,7 +74,7 @@
 			return;
 		}
 
-		tty.c_cc[VMIN]  = should_block ? 8 : 0;
+		tty.c_cc[VMIN]  = should_block ? number_of_char : 0;
 		tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
 
 		if (tcsetattr (fd, TCSANOW, &tty) != 0){
@@ -89,6 +89,7 @@
 		unsigned char buf;
 
 		while(1){
+			set_blocking (fd, 1, 1); 
 			int n = read (fd, &buf, 1);
 			
 			if (n != 1) {
@@ -100,11 +101,11 @@
 					int i;
 	//				for (i = 0 ; i < SERIAL_DATA_SIZE ; i++)
 	//				{
+						set_blocking (fd, 1, SERIAL_DATA_SIZE); 
 						n = read (fd, &buf8, SERIAL_DATA_SIZE);
-	//					printf("n is: %d\n", n);
 	//					buf8[i] = buf;
 	//				}
-	//				printf("READ: recieved bytes:\n");
+					printf("READ: recieved bytes:\n");
 
 	//				for ( i = 0; i < SERIAL_DATA_SIZE; i++)
 	//				{
@@ -186,14 +187,15 @@
 		while (1){
 	//		printf("SEND: in the while loop.\n");
 	//		write(fd, &start, 1);
-			
+
+			set_blocking (fd, 1, 1); 			
 			int n = read (fd, &buf, 1);
 			if (n == 1) {
 	//			printf("SEND: char is: %x\n", buf);
 				if (buf == 0xAA){
 	//				printf("SEND: I recieved BB\n");
 					write(fd, Txbuffer, 13);
-	//				usleep (2000);             // sleep enough to transmit the 7 plus
+					usleep (1000);             // sleep enough to transmit the 7 plus
 	//				printf("SEND: data is written.\n");
 					break;
 				}
@@ -262,7 +264,7 @@
 		}
 
 		set_interface_attribs (fd, B115200, 0);  // set speed to 115,200 bps, 8n1 (no parity)
-		set_blocking (fd, 0);                // set no blocking
+		//set_blocking (fd, 1);                // set no blocking
 
 	// quanser init
 
@@ -341,8 +343,8 @@
 			
 			send_serial(fd, sensor_readings_calibrated);
 
-			usleep(1000);			
-			usleep(50000);				
+			usleep(10000);
+			//usleep(50000);
 		// write
 			double commands[2];
 			read_8_bytes(fd, commands);
