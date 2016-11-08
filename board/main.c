@@ -1,32 +1,4 @@
-/*
- * Copyright (c) 2015, Freescale Semiconductor, Inc.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * o Redistributions of source code must retain the above copyright notice, this list
- *   of conditions and the following disclaimer.
- *
- * o Redistributions in binary form must reproduce the above copyright notice, this
- *   list of conditions and the following disclaimer in the documentation and/or
- *   other materials provided with the distribution.
- *
- * o Neither the name of Freescale Semiconductor, Inc. nor the names of its
- *   contributors may be used to endorse or promote products derived from this
- *   software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -34,22 +6,18 @@
 #include "debug_console_imx.h"
 #include "gpio_ctrl.h"
 #include "hw_timer.h"
-#include "rpmsg/rpmsg_rtos.h"
 #include "semphr.h"
 #include "string.h"
-#include "mu_imx.h"
+
+
 
 #include "gpio_pins.h"
 #include "gpio_imx.h"
-#include "i2c_xfer.h"
-#include "fxas21002.h"
-#include "fxos8700.h"
-#include "mpl3115.h"
 #include "uart_imx.h"
+#include "wdog_imx.h"
 
 
-
-
+static uint32_t wdReset = 20;
 static void UART_SendDataPolling(UART_Type *base, const uint8_t *txBuff, uint32_t txSize);
 static void UART_ReceiveDataPolling(UART_Type *base, uint8_t *rxBuff, uint32_t rxSize);
 
@@ -593,6 +561,7 @@ void MainTask(void *pvParameters)
     int step = 0;
     double vol_step = 0.1;
     int byteCount;
+    
     //const TickType_t xDelay = 20 / portTICK_PERIOD_MS;
     //
     //    FILE *ofp;
@@ -670,7 +639,7 @@ void MainTask(void *pvParameters)
            
             //sleep(50)
             vTaskDelayUntil( &xLastWakeTime, xFrequency ); 
-            
+
             write_to_serial(voltages);
              
             //vTaskDelay(xDelay);
@@ -795,7 +764,8 @@ void MainTask(void *pvParameters)
             vol_right = voltage_max_min(vol_right);
             vol_left = voltage_max_min(vol_left);
             
-            //vTaskDelay(1);
+            
+           
         }
     }    
 
@@ -804,10 +774,18 @@ void MainTask(void *pvParameters)
 
 int main(void)
 {
+
+	
+
+
+
+
+    SRC_M4RCR = 0x2a8;
+
     /* Initialize board specified hardware. */
-    hardware_init();
    // Hw_Timer_Init();
 
+    hardware_init();
     // Get current module clock frequency.
     initConfig.clockRate  = get_uart_clock_freq(BOARD_DEBUG_UART_BASEADDR);
 
@@ -820,6 +798,28 @@ int main(void)
 
     /* Finally, enable the UART module */
     UART_Enable(BOARD_DEBUG_UART_BASEADDR);
+
+    wdog_init_config_t config = {
+       .wdw   = false,    /*!< true: suspend in low power wait, false: not suspend */
+       .wdt   = true,     /*!< true: assert WDOG_B when timeout, false: not assert WDOG_B */
+       .wdbg  = true,     /*!< true: suspend in debug mode, false: not suspend */
+       .wdzst = false     /*!< true: suspend in doze and stop mode, false: not suspend */
+    };
+
+
+    WDOG_Init(BOARD_WDOG_BASEADDR, &config);
+
+    /* Enable WDOG interrupt 0.5 second before WDOG timeout */
+    NVIC_SetPriority(BOARD_WDOG_IRQ_NUM, 3);
+    NVIC_EnableIRQ(BOARD_WDOG_IRQ_NUM);
+    /* Refresh WDOG to reload counter */
+    WDOG_Refresh(BOARD_WDOG_BASEADDR);
+    WDOG_EnableInt(BOARD_WDOG_BASEADDR, 1);
+
+
+    WDOG_Enable(BOARD_WDOG_BASEADDR, 2);
+
+
 
     /* Create a the APP main task. */
     xTaskCreate(MainTask, "Main Task", configMINIMAL_STACK_SIZE + 4200,
@@ -852,4 +852,17 @@ static void UART_ReceiveDataPolling(UART_Type *base, uint8_t *rxBuff, uint32_t r
         if (UART_GetStatusFlag(base, uartStatusRxOverrun))
             UART_ClearStatusFlag(base, uartStatusRxOverrun);
     }
+}
+void BOARD_WDOG_HANDLER()
+{
+	//printf("wdReset %d \n", wdReset)
+    WDOG_ClearStatusFlag(BOARD_WDOG_BASEADDR);
+    //PRINTF("WDOG was refreshed %d\n\r", wdReset);
+    if (wdReset){
+        WDOG_Refresh(BOARD_WDOG_BASEADDR);
+        
+    }
+  
+
+    wdReset = wdReset -1;
 }
