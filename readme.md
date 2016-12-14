@@ -1,0 +1,1 @@
+This project provides the linux drivers for the Q8 data acquisition boards. In addition, the code interacts over serial board with a embedded board to recieve the control commands and transmit sensor readings.
