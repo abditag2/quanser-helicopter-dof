@@ -1,0 +1,11 @@
+7/30/08 - 1:05 PM
+
+	Attempted to read an encoder using our own ioctl function.  Attached helicopter base to one of them and rotated the head to try to change encoder value.  Encoder returns a value, but does not update in real-time.  Moving the head, then removing and re-installing our modules (rmdev, then lddev in the command terminal) results in a different value.  Performing rm/lddev without moving the head or moving it after rm/lddev encoder causes the encoder to output 0.
+
+	- 2:05 PM
+	Thought it might be due to initializing the wrong encoder channel.  Changing it, however, had no effect.  Also tried calling EncInputSingle instead of EncReadSingleLatch, but this continually returned a value of 0.  Will continue to attempt to solve with code fixes, but problem may be due to the fact that the rig is unpowered.  If fixing the code proves ineffective, will attempt this solution tomorrow.
+
+7/31/08
+	Encoder is now working, prints are "accurate" but values are relative, to prevent singularity errors.  I.e. letting the rig rotate more than 360 degrees is a BAD thing.  Attempt to prevent this or directional relativity could be lost.
+
+8/1/08

@@ -1,4 +1,4 @@
-	#include "q8user-betti.h"
+//	#include "q8user-betti.h"
 	#include <stdio.h>
 	#include <sys/types.h>
 	#include <sys/stat.h>
@@ -22,6 +22,7 @@
 
 	#define SERIAL_DATA_SIZE 9
 	#define MAX_VOLTAGE 3.0
+
 
 	int set_interface_attribs (int fd, int speed, int parity)
 	{
@@ -267,13 +268,10 @@
 		//set_blocking (fd, 1);                // set no blocking
 
 	// quanser init
-
+/*
 		int File_Descriptor; 
-		int Return_Value ; /*To catch the return value .......*/
-		char Buffer[Q8_EXAMPLE2_MAXLEN] ;
 		int tmp;
 
-		/* .................Opening the device (Read/Write)................*/
 
 		printf("\n\tOpening the device ..please wait...\n");
 		fflush(stdout);
@@ -285,7 +283,7 @@
 			fprintf( stderr, "\n\tCould not open device file - Error : %i\n", File_Descriptor );
 			return -1;
 		}
-
+*/
 		/* .. Writing the control values to the left and write motor......*/
 
 		int step = 0;
@@ -294,13 +292,14 @@
 		int sensor_reading[3];
 
 		/* .. Reading the Encoder values from the helicopter......*/
-		int err = ioctl(File_Descriptor, Q8_ENC, sensor_reading);
+/*		int err = ioctl(File_Descriptor, Q8_ENC, sensor_reading);
 		if(err != 0)
 		{
 			perror("Epic Fail first enc read\n");
 			return -1;
 		}
-	
+*/	
+		
 		int base_travel = sensor_reading[0];
 		int base_pitch = sensor_reading[1];
 		int base_elevation = sensor_reading[2];
@@ -319,6 +318,7 @@
 		while(1) {
 		/* .. Reading the Encoder values from the helicopter......*/
 		
+/*
 			int err = ioctl(File_Descriptor, Q8_ENC, sensor_reading);
 			if(err != 0)
 			{
@@ -326,6 +326,7 @@
 				return -1;
 			}
 			//close(File_Descriptor);
+*/
 
 		//	sensor_reading[0] = 1000;
 		//	sensor_reading[1] = 24000;
@@ -379,9 +380,9 @@
 			//vol_right = 0;
 			//vol_left = 0;
 			
-			tmparray[0] = Q8_dacVTO((vol_right), 1, 10);
-			tmparray[1] = Q8_dacVTO((vol_left), 1, 10);
-			ioctl(File_Descriptor, Q8_WR_DAC, tmparray);
+//			tmparray[0] = Q8_dacVTO((vol_right), 1, 10);
+//			tmparray[1] = Q8_dacVTO((vol_left), 1, 10);
+//			ioctl(File_Descriptor, Q8_WR_DAC, tmparray);
 
 	//		printf("\n step: %d, travel = %d, pitch = %d, elevation = %d, left: %lf, right: %lf\n", step, sensor_reading[0]-base_travel, sensor_reading[1] -base_pitch , -(sensor_reading[2]-base_elevation)- 350, vol_left, vol_right); 
 

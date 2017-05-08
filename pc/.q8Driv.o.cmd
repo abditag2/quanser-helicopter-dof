@@ -1,0 +1,1 @@
+cmd_/home/quanse/repo/quanser-helicopter-dof/pc/q8Driv.o := ld -m elf_i386   -r -o /home/quanse/repo/quanser-helicopter-dof/pc/q8Driv.o /home/quanse/repo/quanser-helicopter-dof/pc/q8Driv-patched.o /home/quanse/repo/quanser-helicopter-dof/pc/q8Driv-betti.o 

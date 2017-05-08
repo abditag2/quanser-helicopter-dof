@@ -1,0 +1,1 @@
+cmd_/home/quanse/repo/quanser-helicopter-dof/pc/q8Driv.ko := ld -r -m elf_i386 -T ./scripts/module-common.lds --build-id  -o /home/quanse/repo/quanser-helicopter-dof/pc/q8Driv.ko /home/quanse/repo/quanser-helicopter-dof/pc/q8Driv.o /home/quanse/repo/quanser-helicopter-dof/pc/q8Driv.mod.o

@@ -21,7 +21,7 @@
 	#include <stdio.h>
 
 	#define SERIAL_DATA_SIZE 9
-	#define MAX_VOLTAGE 3.0
+	#define MAX_VOLTAGE 4.0
 
 	int set_interface_attribs (int fd, int speed, int parity)
 	{
@@ -83,7 +83,7 @@
 	}
 
 
-	void read_8_bytes(int fd, double* commands){
+	unsigned char read_8_bytes(int fd, double* commands){
 		// printf("READ\n");
 		unsigned char buf8[SERIAL_DATA_SIZE];
 		unsigned char buf;
@@ -105,7 +105,7 @@
 						n = read (fd, &buf8, SERIAL_DATA_SIZE);
 	//					buf8[i] = buf;
 	//				}
-					printf("READ: recieved bytes:\n");
+					//printf("READ: recieved bytes:\n");
 
 	//				for ( i = 0; i < SERIAL_DATA_SIZE; i++)
 	//				{
@@ -123,11 +123,13 @@
 		int vol_left = *(int*)buf8;
 		int vol_right = *(int*) &buf8[4];
 		
-		printf("vol left : %d \n", vol_left);	
+		//printf("vol left : %d \n", vol_left);	
+		//printf("cmd: %d\n", buf8[8]);
 
 		commands[0] = ((double) vol_left)/10000.0;
 		commands[1] = ((double) vol_right)/10000.0;
 
+		return buf8[8];
 	}
 
 
@@ -255,7 +257,7 @@
 	{
 		//serial port init
 
-		char *portname = "/dev/ttyUSB0";
+		char *portname = "/dev/ttyACM0";
 		int fd = open (portname, O_RDWR | O_NOCTTY | O_SYNC);
 		if (fd < 0)
 		{
@@ -313,8 +315,12 @@
 		ioctl(File_Descriptor, Q8_WR_DAC, tmparray);
 	*/
 
-		struct timeval current_time, last;
-		
+		struct timeval beginTime, current_time, last;
+		gettimeofday(&beginTime, NULL);
+
+		#define CMD_READ_SENSORS	0
+		#define CMD_WRITE_VOLTAGES	1		
+		unsigned char currentCmd = CMD_READ_SENSORS;
 
 		while(1) {
 		/* .. Reading the Encoder values from the helicopter......*/
@@ -341,26 +347,33 @@
 			sensor_readings_calibrated[1] = sensor_reading[1] - base_pitch;
 			sensor_readings_calibrated[2] = sensor_reading[2] - base_elevation;
 			
-			send_serial(fd, sensor_readings_calibrated);
+			if (currentCmd == CMD_READ_SENSORS)
+				send_serial(fd, sensor_readings_calibrated);
 
-			usleep(10000);
+			//usleep(10000);
 			//usleep(50000);
 		// write
 			double commands[2];
-			read_8_bytes(fd, commands);
+			currentCmd = read_8_bytes(fd, commands);
 
 			
 			gettimeofday(&current_time, NULL);
 						
 			uint64_t delta_us = (current_time.tv_sec - last.tv_sec) * 1000000 + (current_time.tv_usec - last.tv_usec);
-			
-			printf("\n \t\t\t%d, %d, %d\n", sensor_readings_calibrated[0], sensor_readings_calibrated[1], sensor_readings_calibrated[2]);	
-			printf("%" PRId64 " \t val1: %lf, val2: %lf\n", delta_us, commands[0], commands[1] ) ;
+	//		uint64_t timeSinceBegin = current_time.tv_sec - beginTime.tv_sec;
+	//		printf("%" PRId64 "\t%d\t%d\t%d\t%lf\t%lf\n", timeSinceBegin, sensor_readings_calibrated[0], sensor_readings_calibrated[1], sensor_readings_calibrated[2], commands[0], commands[1]);
+//			printf("\n \t\t\t%d, %d, %d\n", sensor_readings_calibrated[0], sensor_readings_calibrated[1], sensor_readings_calibrated[2]);	
+//			printf("%" PRId64 " \t val1: %lf, val2: %lf\n", delta_us, commands[0], commands[1] ) ;
+
+			if (currentCmd == CMD_WRITE_VOLTAGES) {
+
+				uint64_t timeSinceBegin = (current_time.tv_sec - beginTime.tv_sec) * 1000000 + (current_time.tv_usec - beginTime.tv_usec);
+
+	                        printf("%" PRId64 "\t%d\t%d\t%d\t%lf\t%lf\n", timeSinceBegin, sensor_readings_calibrated[0], sensor_readings_calibrated[1], sensor_readings_calibrated[2], commands[0], commands[1]);
 
 
-
-			vol_left = commands[0];
-			vol_right = commands[1];
+				vol_left = commands[0];
+				vol_right = commands[1];
 
 
 				if (vol_right > MAX_VOLTAGE)
@@ -373,15 +386,18 @@
 				else if (vol_left < -MAX_VOLTAGE)
 					vol_left = -MAX_VOLTAGE;
 
-			unsigned short int tmparray[4];
+				unsigned short int tmparray[4];
 			
 			
-			//vol_right = 0;
-			//vol_left = 0;
+				//vol_right = 0;
+				//vol_left = 0;
 			
-			tmparray[0] = Q8_dacVTO((vol_right), 1, 10);
-			tmparray[1] = Q8_dacVTO((vol_left), 1, 10);
-			ioctl(File_Descriptor, Q8_WR_DAC, tmparray);
+				tmparray[0] = Q8_dacVTO((vol_right), 1, 10);
+				tmparray[1] = Q8_dacVTO((vol_left), 1, 10);
+
+		
+				ioctl(File_Descriptor, Q8_WR_DAC, tmparray);
+			}
 
 	//		printf("\n step: %d, travel = %d, pitch = %d, elevation = %d, left: %lf, right: %lf\n", step, sensor_reading[0]-base_travel, sensor_reading[1] -base_pitch , -(sensor_reading[2]-base_elevation)- 350, vol_left, vol_right); 
 
